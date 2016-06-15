@@ -16,8 +16,8 @@ Please cite the article when making use of this code:
 }
 
 #### Build
-1. Download and setup Inviwo:
- - Download link: https://github.com/inviwo/inviwo
+1. Download and setup Inviwo (tested with version 0.9.7):
+ - Download link: https://github.com/inviwo/inviwo/tree/v0.9.7
  - Setup instructions: https://github.com/inviwo/inviwo/wiki
  - OpenCL Required (For Nvidia: https://developer.nvidia.com/cuda-toolkit)
  
@@ -43,6 +43,14 @@ Please cite the article when making use of this code:
 ### Licenses
 Each folder can be under a different license. See license.txt in each folder. 
 
-clogs 1.5.0 is under MIT license
+radixsortcl: clogs 1.5.0 is under MIT license 
 
-MWC64X is under BSD license
+rndgenmwc64x: MWC64X is under BSD license
+
+uniformgridcl: is under MIT license
+
+importancesamplingcl is under Creative Commons Attribution-NonCommercial 4.0 International license 
+
+lightcl is under Creative Commons Attribution-NonCommercial 4.0 International license 
+
+progressivephotonmapping is under Creative Commons Attribution-NonCommercial 4.0 International license 
