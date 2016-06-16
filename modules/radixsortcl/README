@@ -1,0 +1,13 @@
+Guide to upgrading clogs:
+1. Replace includes of "#include <CL/cl.hpp>" with "#include <modules/opencl/cl.hpp>"
+2. In utils.h: make getSourceMap(); return a non-constant map. In utils.cpp; add
+static std::map<std::string, Source> g_sources = std::map<std::string, std::string>();
+
+std::map<std::string, Source> &getSourceMap() { return g_sources; }; 
+
+
+3. Optionally run python script to generate hash string (we use the files instead of putting it into source code:
+python clc2cpp.py kernels/radixsort.cl kernels/reduce.cl kernels/scan.cl output.cpp 
+
+
+
