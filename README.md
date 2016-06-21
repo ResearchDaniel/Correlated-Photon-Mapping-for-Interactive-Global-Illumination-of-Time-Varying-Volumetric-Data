@@ -30,7 +30,7 @@ Please cite the article when making use of this code:
 4. Enable the IVW_MODULE_PROGRESSIVE_PHOTONMAPPING
  - Press Configure/Generate in CMake until no errors appear.
  - Compile and run!
- - Load workspace workspaces/CorrelatedPhotonMapping.inv for and example. 
+ - Load workspace workspaces/CorrelatedPhotonMappingSingleVolume.inv for and example. 
  - Be patient: Optimal OpenCL workgroup sizes are found for sorting the first time loading the workspace. 
 
 #### Build system
