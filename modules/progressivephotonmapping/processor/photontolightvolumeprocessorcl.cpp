@@ -223,7 +223,7 @@ void PhotonToLightVolumeProcessorCL::process() {
             copyIndexPhotonsKernel_->setArg(0, *photonsCL);
             copyIndexPhotonsKernel_->setArg(3, 1.f);
             copyIndexPhotonsKernel_->setArg(7, static_cast<int>(recomputedPhotonIndices->nRecomputedPhotons));
-            OpenCL::getPtr()->getAsyncQueue().enqueueNDRangeKernel(
+            OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(
                 *copyIndexPhotonsKernel_, cl::NullRange, globalWorkGroupSize, localWorkGroupSize, nullptr, &copyAlingedPhotonEvents[1]);
 
 
@@ -349,12 +349,12 @@ void PhotonToLightVolumeProcessorCL::process() {
             SyncCLGL glSync;
             glSync.addToAquireGLObjectList(photonsCL);
             glSync.aquireAllObjects();
-            OpenCL::getPtr()->getAsyncQueue().enqueueCopyBuffer(
+            OpenCL::getPtr()->getQueue().enqueueCopyBuffer(
                 photonsCL->get(), prevPhotonsCL->getEditable(), 0, size_t(0), photonData->photons_.getSizeInBytes(), nullptr, &copyPrevPhotonsEvent_.back());
         } else {
             auto photonsCL = photonData->photons_.getRepresentation<BufferCL>();
             auto prevPhotonsCL = prevPhotons_.getEditableRepresentation<BufferCL>();
-            OpenCL::getPtr()->getAsyncQueue().enqueueCopyBuffer(
+            OpenCL::getPtr()->getQueue().enqueueCopyBuffer(
                 photonsCL->get(), prevPhotonsCL->getEditable(), 0, size_t(0), photonData->photons_.getSizeInBytes(), nullptr, &copyPrevPhotonsEvent_.back());
         }
     }
