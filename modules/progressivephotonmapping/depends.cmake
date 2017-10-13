@@ -4,7 +4,6 @@ set(dependencies
     InviwoOpenGLModule
     InviwoOpenCLModule
     InviwoLightCLModule
-	InviwoImportanceSamplingCLModule
-    InviwoMeanFreePathCLModule
+    InviwoImportanceSamplingCLModule
     InviwoRndGenMWC64XModule
 )
