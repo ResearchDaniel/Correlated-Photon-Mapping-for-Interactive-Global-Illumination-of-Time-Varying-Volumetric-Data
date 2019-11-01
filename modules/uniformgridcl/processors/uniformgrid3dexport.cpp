@@ -29,6 +29,17 @@
 
 #include "uniformgrid3dexport.h"
 
+ // add by myself
+#ifndef  _My_env
+#define	 _My_env
+#include "inviwo/core/util/filesystem.h"
+#include "inviwo/core/io/datareaderfactory.h"
+#include "inviwo/core/common/inviwoapplication.h"
+#include "inviwo/core/io/datawriterfactory.h"
+#include "inviwo/core/properties/buttonproperty.h"
+#endif // ! _My_env
+
+
 namespace inviwo {
 
 // The Class Identifier has to be globally unique. Use a reverse DNS naming scheme
@@ -51,6 +62,15 @@ UniformGrid3DExport::UniformGrid3DExport()
     , exportButton_("export", "Export", InvalidationLevel::Valid)
     , overwrite_("overwrite", "Overwrite", false) {
     
+	// own code 
+	/*std::vector<FileExtension> ext;
+	for (auto& ext :
+		InviwoApplication::getPtr()->getDataWriterFactory()->getExtensionsForType<UniformGrid3DVector>()) {
+		std::stringstream ss;
+		ss << ext.description_ << " (*." << ext.extension_ << ")";
+		file_.addNameFilter(ss.str());
+	}*/
+
     for (auto& ext :
         InviwoApplication::getPtr()->getDataWriterFactory()->getExtensionsForType<UniformGrid3DVector>()) {
         std::stringstream ss;
@@ -61,7 +81,7 @@ UniformGrid3DExport::UniformGrid3DExport()
     addPort(inport_);
     addProperty(file_);
     file_.setAcceptMode(FileProperty::AcceptMode::Save);
-    exportButton_.onChange(this, &UniformGrid3DExport::exportData);
+    this->exportButton_.onChange(this, &UniformGrid3DExport::exportData);
     addProperty(exportButton_);
     addProperty(overwrite_);
 }
@@ -75,7 +95,7 @@ void UniformGrid3DExport::exportData() {
 
     if (data && !file_.get().empty()) {
         std::string fileExtension = filesystem::getFileExtension(file_.get());
-
+		//DataWriterFactory factory =  getNetwork()->getApplication()->getDataWriterFactory();
         auto factory = getNetwork()->getApplication()->getDataWriterFactory();
         if (auto writer = factory->getWriterForTypeAndExtension<UniformGrid3DVector>(fileExtension)) {
             try {

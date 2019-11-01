@@ -65,6 +65,17 @@
 
 #include <clogs/clogs.h>
 
+
+ // add by myself
+#ifndef  _My_env
+#define	 _My_env
+#include "inviwo/core/util/filesystem.h"
+#include "inviwo/core/io/datareaderfactory.h"
+#include "inviwo/core/common/inviwoapplication.h"
+#include "inviwo/core/io/datawriterfactory.h"
+#include "inviwo/core/properties/buttonproperty.h"
+#endif // ! _My_env
+
 namespace inviwo {
 
 /** \docpage{<classIdentifier>, ProgressivePhotonTracerCL}
