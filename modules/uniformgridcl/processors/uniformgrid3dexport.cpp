@@ -2,7 +2,7 @@
  *
  * Inviwo - Interactive Visualization Workshop
  *
- * Copyright (c) 2016 Daniel Jönsson
+ * Copyright (c) 2016 Daniel Jï¿½nsson
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -81,7 +81,7 @@ UniformGrid3DExport::UniformGrid3DExport()
     addPort(inport_);
     addProperty(file_);
     file_.setAcceptMode(FileProperty::AcceptMode::Save);
-    this->exportButton_.onChange(this, &UniformGrid3DExport::exportData);
+    exportButton_.onChange(this, &UniformGrid3DExport::exportData);
     addProperty(exportButton_);
     addProperty(overwrite_);
 }
@@ -95,7 +95,6 @@ void UniformGrid3DExport::exportData() {
 
     if (data && !file_.get().empty()) {
         std::string fileExtension = filesystem::getFileExtension(file_.get());
-		//DataWriterFactory factory =  getNetwork()->getApplication()->getDataWriterFactory();
         auto factory = getNetwork()->getApplication()->getDataWriterFactory();
         if (auto writer = factory->getWriterForTypeAndExtension<UniformGrid3DVector>(fileExtension)) {
             try {
