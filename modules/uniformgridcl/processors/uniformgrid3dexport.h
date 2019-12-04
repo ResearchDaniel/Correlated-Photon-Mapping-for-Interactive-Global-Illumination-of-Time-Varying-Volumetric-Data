@@ -33,7 +33,9 @@
 #include <modules/uniformgridcl/uniformgridclmoduledefine.h>
 #include <inviwo/core/common/inviwo.h>
 #include <inviwo/core/processors/processor.h>
-#include <inviwo/core/properties/ordinalproperty.h>
+#include <inviwo/core/properties/boolproperty.h>
+#include <inviwo/core/properties/buttonproperty.h>
+#include <inviwo/core/properties/fileproperty.h>
 #include <inviwo/core/ports/imageport.h>
 #include <modules/uniformgridcl/uniformgrid3d.h>
 
@@ -63,7 +65,7 @@ namespace inviwo {
 class IVW_MODULE_UNIFORMGRIDCL_API UniformGrid3DExport : public Processor { 
 public:
     UniformGrid3DExport();
-    virtual ~UniformGrid3DExport() = default;
+    virtual ~UniformGrid3DExport();
      
     virtual void process() override;
 

@@ -37,49 +37,50 @@
 #include <modules/uniformgridcl/uniformgrid3d.h>
 
 namespace inviwo {
-
+    
 /**
  * \class UniformGrid3DWriter
  * \brief VERY_BRIEFLY_DESCRIBE_THE_CLASS
  * DESCRIBE_THE_CLASS
  */
-class IVW_MODULE_UNIFORMGRIDCL_API UniformGrid3DWriter : public DataWriterType< UniformGrid3DVector > {
+class IVW_MODULE_UNIFORMGRIDCL_API UniformGrid3DWriter: public DataWriter {
+    //: public DataWriterType< UniformGrid3DVector > {
 public:
     UniformGrid3DWriter();
     UniformGrid3DWriter(const UniformGrid3DWriter& rhs);
     UniformGrid3DWriter& operator=(const UniformGrid3DWriter& that);
     virtual UniformGrid3DWriter* clone() const;
     virtual ~UniformGrid3DWriter() = default;
-
+    
     virtual void writeData(const UniformGrid3DVector* data, const std::string filePath) const;
     template<typename S>
     void writeKeyToString(std::stringstream& ss, const std::string& key, const S& vec) const {
         ss << key << ": " << vec << std::endl;
     }
-
+    
     template<typename S>
-    void writeKeyToString(std::stringstream& ss, const std::string& key, const glm::detail::tvec2<S, glm::defaultp>& vec) const {
+    void writeKeyToString(std::stringstream& ss, const std::string& key, const glm::tvec2<S, glm::defaultp>& vec) const {
         ss << key << ": " << vec.x << " " << vec.y << std::endl;
     }
     template<typename S>
-    void writeKeyToString(std::stringstream& ss, const std::string& key, const glm::detail::tvec3<S, glm::defaultp>& vec) const{
+    void writeKeyToString(std::stringstream& ss, const std::string& key, const glm::tvec3<S, glm::defaultp>& vec) const{
         ss << key << ": " << vec.x << " " << vec.y << " " << vec.z << std::endl;
     }
     template<typename S>
-    void writeKeyToString(std::stringstream& ss, const std::string& key, const glm::detail::tvec4<S, glm::defaultp>& vec) const{
+    void writeKeyToString(std::stringstream& ss, const std::string& key, const glm::tvec4<S, glm::defaultp>& vec) const{
         ss << key << ": " << vec.x << " " << vec.y << " " << vec.z << " " << vec.w << std::endl;
     }
     template<typename S>
-    void writeKeyToString(std::stringstream& ss, const std::string& key, const glm::detail::tmat4x4<S, glm::defaultp>& mat) const{
+    void writeKeyToString(std::stringstream& ss, const std::string& key, const glm::tmat4x4<S, glm::defaultp>& mat) const{
         ss << key << ":";
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
                 ss << " " << mat[i][j];
             }
             ss << std::endl;
-        } 
+        }
     }
-
+    
     void writeKeyToString(std::stringstream& ss, const std::string& key, const std::string& str) const{
         ss << key << ": " << str << std::endl;
     }
@@ -88,4 +89,3 @@ public:
 } // namespace
 
 #endif // IVW_UNIFORMGRID3DWRITER_H
-

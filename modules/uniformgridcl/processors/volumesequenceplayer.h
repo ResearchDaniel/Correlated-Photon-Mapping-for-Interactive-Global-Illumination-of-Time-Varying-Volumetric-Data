@@ -34,6 +34,8 @@
 #include <inviwo/core/common/inviwo.h>
 #include <inviwo/core/processors/processor.h>
 #include <inviwo/core/properties/ordinalproperty.h>
+#include <inviwo/core/ports/volumeport.h>
+
 #include <inviwo/core/util/timer.h>
 
 #include <modules/opengl/buffer/framebufferobject.h>
@@ -50,7 +52,7 @@ namespace inviwo {
  *
  * ### Outports
  *   * __<Outport1>__ <description>.
- * 
+ *
  * ### Properties
  *   * __<Prop1>__ <description>.
  *   * __<Prop2>__ <description>
@@ -61,37 +63,37 @@ namespace inviwo {
  * \class VolumeSequencePlayer
  * \brief Linearly interpolates between two volumes to create the output at time t.
  */
-class IVW_MODULE_UNIFORMGRIDCL_API VolumeSequencePlayer : public Processor { 
+class IVW_MODULE_UNIFORMGRIDCL_API VolumeSequencePlayer : public Processor {
 public:
     VolumeSequencePlayer();
-
+    
     void onTimeStepChange();
-
+    
     virtual ~VolumeSequencePlayer() = default;
-     
+    
     virtual void process() override;
-
+    
     virtual const ProcessorInfo getProcessorInfo() const override;
     static const ProcessorInfo processorInfo_;
-
+    
 private:
     void onSequenceTimerEvent();
-
+    
     void updateVolumeIndex();
-
+    
     VolumeSequenceInport inport_;
     VolumeOutport outport_;
-
+    
     std::shared_ptr<Volume> outVolume_;
     Shader shader_;
     FrameBufferObject fbo_;
-
+    
     FloatProperty time_;
     IntProperty index_;
     FloatProperty timePerVolume_;
     IntProperty volumesPerSecond_;
     BoolProperty playSequence_;
-
+    
     Timer sequenceTimer_;
 };
 

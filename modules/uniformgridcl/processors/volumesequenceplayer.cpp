@@ -49,21 +49,21 @@ const ProcessorInfo VolumeSequencePlayer::getProcessorInfo() const {
 }
 
 VolumeSequencePlayer::VolumeSequencePlayer()
-    : Processor()
-    , inport_("volumeSequence")
-    , outport_("InterpolatedVolume")
-    , time_("time", "Time", 0.f, 0.f, 0.f)
-    , index_("selectedSequenceIndex", "Sequence index", 1, 1, 1)
-    , timePerVolume_("timePerVolume", "Time Per Volume (s)", 1.f, 0.01f, 10.f, 0.01f)
-    , playSequence_("playSequence", "Play Sequence", false)
-    , volumesPerSecond_("volumesPerSecond", "Frame rate", 10, 1, 60, 1, InvalidationLevel::Valid)
-    , sequenceTimer_(1000 / volumesPerSecond_.get(), [this](){ onSequenceTimerEvent(); })
-    , shader_("volume_gpu.vert", "volume_gpu.geom", "volume_mix.frag", true)
+: Processor()
+, inport_("volumeSequence")
+, outport_("InterpolatedVolume")
+, shader_("volume_gpu.vert", "volume_gpu.geom", "volume_mix.frag", true)
+, time_("time", "Time", 0.f, 0.f, 0.f)
+, index_("selectedSequenceIndex", "Sequence index", 1, 1, 1)
+, timePerVolume_("timePerVolume", "Time Per Volume (s)", 1.f, 0.01f, 10.f, 0.01f)
+, volumesPerSecond_("volumesPerSecond", "Frame rate", 10, 1, 60, 1, InvalidationLevel::Valid)
+, sequenceTimer_(Timer::Milliseconds(1000 / volumesPerSecond_.get()), [this](){ onSequenceTimerEvent(); })
+, playSequence_("playSequence", "Play Sequence", false)
 {
     addPort(inport_);
     inport_.onChange([this]() {
         onTimeStepChange();
-
+        
     });
     addPort(outport_);
     addProperty(time_);
@@ -74,22 +74,22 @@ VolumeSequencePlayer::VolumeSequencePlayer()
     timePerVolume_.onChange([this]() {
         onTimeStepChange();
     });
-
+    
     addProperty(volumesPerSecond_);
-    volumesPerSecond_.onChange([this]() { sequenceTimer_.setInterval(1000 / volumesPerSecond_.get()); });
+    volumesPerSecond_.onChange([this]() { sequenceTimer_.setInterval(Timer::Milliseconds(1000 / volumesPerSecond_.get())); });
     addProperty(playSequence_);
-    playSequence_.onChange([this]() { 
+    playSequence_.onChange([this]() {
         time_.setReadOnly(playSequence_);
         
         if (playSequence_) {
-            sequenceTimer_.setInterval(1000 / volumesPerSecond_.get());
+            sequenceTimer_.setInterval(Timer::Milliseconds(1000 / volumesPerSecond_.get()));
             sequenceTimer_.start();
         } else {
             sequenceTimer_.stop();
         }
     });
 }
-    
+
 void VolumeSequencePlayer::process() {
     auto volumes = inport_.getData();
     float integerTime;
@@ -116,7 +116,7 @@ void VolumeSequencePlayer::process() {
         utilgl::bindTexture(*inputVol0, vol0Unit);
         utilgl::bindTexture(*inputVol1, vol1Unit);
         shader_.activate();
-
+        
         shader_.setUniform("volume", vol0Unit.getUnitNumber());
         utilgl::setShaderUniforms(shader_, *inputVol0, "volumeParameters");
         shader_.setUniform("volume1", vol1Unit.getUnitNumber());
@@ -129,12 +129,12 @@ void VolumeSequencePlayer::process() {
             outVolume_->invalidateAllOther(outVolumeGL);
             fbo_.attachColorTexture(outVolumeGL->getTexture().get(), 0);
         }
-
+        
         utilgl::multiDrawImagePlaneRect(static_cast<int>(outVolume_->getDimensions().z));
-
+        
         shader_.deactivate();
         fbo_.deactivate();
-
+        
         outport_.setData(outVolume_);
     } else {
         outport_.setData(volumes->at(timeStep));
@@ -150,14 +150,14 @@ void VolumeSequencePlayer::onSequenceTimerEvent() {
     }
     time_.set(time);
     updateVolumeIndex();
-
-
+    
+    
 }
 
 void VolumeSequencePlayer::updateVolumeIndex() {
     float integerTime;
     // Time between two volumes
-    float t = std::modf(time_ / timePerVolume_, &integerTime);
+    std::modf(time_ / timePerVolume_, &integerTime);
     auto timeStep = static_cast<size_t>(integerTime) % index_.getMaxValue();
     if (timeStep != (index_ - 1)) {
         index_.set(static_cast<int>(timeStep + 1));
@@ -175,7 +175,7 @@ void VolumeSequencePlayer::onTimeStepChange() {
         if (index_ > index_.getMaxValue()) {
             index_.set(index_.getMinValue());
         }
-    } 
+    }
 }
 
 

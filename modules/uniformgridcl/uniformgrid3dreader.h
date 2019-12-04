@@ -42,18 +42,19 @@ namespace inviwo {
  * \brief VERY_BRIEFLY_DESCRIBE_THE_CLASS
  * DESCRIBE_THE_CLASS
  */
-    class IVW_MODULE_UNIFORMGRIDCL_API UniformGrid3DReader : public DataReaderType< UniformGrid3DVector > {
+class IVW_MODULE_UNIFORMGRIDCL_API UniformGrid3DReader : public DataReaderType< UniformGrid3DVector > {
 public:
     UniformGrid3DReader();
     UniformGrid3DReader(const UniformGrid3DReader& rhs);
     UniformGrid3DReader& operator=(const UniformGrid3DReader& that);
     virtual UniformGrid3DReader* clone() const override;
     virtual ~UniformGrid3DReader() = default;
-
-    virtual std::shared_ptr<UniformGrid3DVector> readData(const std::string filePath) override;
+    
+    virtual std::shared_ptr<UniformGrid3DVector> readData(const std::string& filePath) override;
 };
 
 } // namespace
 
 #endif // IVW_UNIFORMGRID3DREADER_H
+
 

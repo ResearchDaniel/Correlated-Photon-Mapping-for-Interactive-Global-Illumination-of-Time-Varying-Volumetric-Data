@@ -38,6 +38,9 @@
 #include <inviwo/core/processors/processor.h>
 #include <inviwo/core/ports/volumeport.h>
 #include <inviwo/core/datastructures/buffer/buffer.h>
+#include <inviwo/core/properties/boolproperty.h>
+#include <inviwo/core/properties/optionproperty.h>
+#include <inviwo/core/properties/ordinalproperty.h>
 #include <modules/base/properties/volumeinformationproperty.h>
 
 #include <modules/opencl/inviwoopencl.h>
@@ -59,7 +62,7 @@ namespace inviwo {
  *
  * ### Outports
  *   * __<Outport1>__ <description>.
- * 
+ *
  * ### Properties
  *   * __<Prop1>__ <description>.
  *   * __<Prop2>__ <description>
@@ -69,33 +72,33 @@ namespace inviwo {
 /**
  * \class PhotonToLightVolumeProcessorCL
  *
- * \brief <brief description> 
+ * \brief <brief description>
  *
  * <Detailed description from a developer prespective>
  */
-class IVW_MODULE_PROGRESSIVEPHOTONMAPPING_API PhotonToLightVolumeProcessorCL : public Processor { 
+class IVW_MODULE_PROGRESSIVEPHOTONMAPPING_API PhotonToLightVolumeProcessorCL : public Processor {
 public:
     virtual const ProcessorInfo getProcessorInfo() const override;
     static const ProcessorInfo processorInfo_;
     PhotonToLightVolumeProcessorCL();
     virtual ~PhotonToLightVolumeProcessorCL() = default;
-
+    
     virtual void process();
 protected:
     void executeVolumeOperation(const Volume* volume, const VolumeCLBase* volumeCL, VolumeCLBase* volumeOutCL, const BufferCLBase* photonsCL, const Volume* volumeOut, const size3_t& outDim, const size_t& globalWorkGroupSize, const size_t& localWorkgroupSize, std::vector<cl::Event>* waitForEvents, cl::Event* splatEvent, cl::Event* copyEvent);
-
+    
     void clearBuffer(BufferCL* tmpVolumeCL, size_t outDimFlattened, const size_t& localWorkgroupSize, std::vector<cl::Event>* waitForEvents, cl::Event * events);
-
+    
     void photonsToLightVolume(VolumeCLBase* volumeOutCL, const BufferCLBase* photonsCL, const BufferCLBase* photonIndices, const PhotonData& photons, const RecomputedPhotonIndices& recomputedPhotons, float radianceMultiplier, const Volume* volumeOut, const size3_t& outDim, const size_t& globalWorkGroupSize, const size_t& localWorkgroupSize, std::vector<cl::Event>* waitForEvents, cl::Event* event);
     void volumeSizeOptionChanged();
     void buildKernel();
-private:
+    private:
     VolumeInport volumeInport_;
     DataInport<PhotonData> photons_;
     DataInport<RecomputedPhotonIndices> recomputedPhotonIndicesPort_;
     VolumeOutport outport_;
-
-
+    
+    
     //CameraProperty camera_;
     OptionPropertyInt volumeSizeOption_;
     OptionPropertyString volumeDataTypeOption_;
@@ -104,14 +107,14 @@ private:
     BoolProperty alignChangedPhotons_;
     IntProperty workGroupSize_;
     BoolProperty useGLSharing_;
-
+    
     ProcessorKernelOwner kernelOwner_;
     cl::Kernel* kernel_;
     cl::Kernel* splatSelectedPhotonsKernel_;
     cl::Kernel* clearFloatsKernel_;
     cl::Kernel* photonDensityNormalizationKernel_;
     cl::Kernel* copyIndexPhotonsKernel_;
-    std::vector<cl::Event> copyPrevPhotonsEvent_; // Can be done in parallel, wait for completion if 
+    std::vector<cl::Event> copyPrevPhotonsEvent_; // Can be done in parallel, wait for completion if
     std::shared_ptr<Volume> lightVolume_;
     Buffer<vec4> prevPhotons_; // Copy of photons from last computation only used when recomputedPhotonIndicesPort_ is connected
     Buffer<vec4> changedAlignedPhotons_; // Aligned copy of photons changed from previous and current distribution. Only used when recomputedPhotonIndicesPort_ is connected

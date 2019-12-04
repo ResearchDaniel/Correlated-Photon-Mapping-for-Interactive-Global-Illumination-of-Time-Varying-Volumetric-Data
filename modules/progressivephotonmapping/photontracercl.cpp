@@ -31,12 +31,14 @@
  *********************************************************************************/
 
 #include "photontracercl.h"
+#include <inviwo/core/datastructures/image/layer.h>
 #include <modules/opencl/syncclgl.h>
 #include <modules/opencl/image/imagecl.h>
+#include <modules/opencl/image/layercl.h>
+#include <modules/opencl/image/layerclgl.h>
 #include <modules/opencl/volume/volumeclgl.h>
 #include <modules/opencl/volume/volumecl.h>
 #include <modules/opencl/buffer/bufferclgl.h>
-#include <modules/opencl/buffer/elementbufferclgl.h>
 
 #include <modules/rndgenmwc64x/mwc64xseedgenerator.h>
 
@@ -84,7 +86,7 @@ void PhotonTracerCL::tracePhotons(const Volume* volume, const TransferFunction& 
             BufferCLGL* photonCL = photonOutData->photons_.getEditableRepresentation<BufferCLGL>();
             
             const LayerCLGL* transferFunctionCL = transferFunction.getData()->getRepresentation<LayerCLGL>();
-            const ElementBufferCLGL* photonsToRecomputeIndicesCL = nullptr;
+            const BufferCLGL* photonsToRecomputeIndicesCL = nullptr;
             
             // Acquire shared representations before using them in OpenGL
             // The SyncCLGL object will take care of synchronization between OpenGL and OpenCL
@@ -95,18 +97,18 @@ void PhotonTracerCL::tracePhotons(const Volume* volume, const TransferFunction& 
             glSync.addToAquireGLObjectList(transferFunctionCL);
             //{IVW_CPU_PROFILING("aquireAllObjects")
             if (photonsToRecomputeIndices) {
-                photonsToRecomputeIndicesCL = photonsToRecomputeIndices->getRepresentation<ElementBufferCLGL>();
+                photonsToRecomputeIndicesCL = photonsToRecomputeIndices->getRepresentation<BufferCLGL>();
                 glSync.addToAquireGLObjectList(photonsToRecomputeIndicesCL);
             }
-
+            
             
             glSync.aquireAllObjects();
             //}
             //{IVW_CPU_PROFILING("tracePhotons")
-                tracePhotons(photonOutData, volumeCL, volumeCL->getVolumeStruct(volume), axisAlignedBoundingBoxCL
-                , transferFunctionCL, material, stepSize, lightSamplesCL, intersectionPointsCL, lightSamples->getSize(), photonsToRecomputeIndicesCL, nInvalidPhotons
-                , photonCL, photonOffset, batch, maxInteractions
-                , waitForEvents, event);
+            tracePhotons(photonOutData, volumeCL, volumeCL->getVolumeStruct(volume), axisAlignedBoundingBoxCL
+                         , transferFunctionCL, material, stepSize, lightSamplesCL, intersectionPointsCL, lightSamples->getSize(), photonsToRecomputeIndicesCL, nInvalidPhotons
+                         , photonCL, photonOffset, batch, maxInteractions
+                         , waitForEvents, event);
             //}
         } else {
             const VolumeCL* volumeCL = volume->getRepresentation<VolumeCL>();
@@ -119,14 +121,14 @@ void PhotonTracerCL::tracePhotons(const Volume* volume, const TransferFunction& 
                 photonsToRecomputeIndicesCL = photonsToRecomputeIndices->getRepresentation<BufferCL>();
             }
             tracePhotons(photonOutData, volumeCL, volumeCL->getVolumeStruct(volume), axisAlignedBoundingBoxCL
-                , transferFunctionCL, material, stepSize, lightSamplesCL, intersectionPointsCL, lightSamples->getSize(), photonsToRecomputeIndicesCL, nInvalidPhotons
-                , photonCL, photonOffset, batch, maxInteractions
-                , waitForEvents, event);
+                         , transferFunctionCL, material, stepSize, lightSamplesCL, intersectionPointsCL, lightSamples->getSize(), photonsToRecomputeIndicesCL, nInvalidPhotons
+                         , photonCL, photonOffset, batch, maxInteractions
+                         , waitForEvents, event);
         }
     } catch (cl::Error& err) {
         LogError(getCLErrorString(err));
     }
-
+    
 }
 
 
@@ -168,7 +170,7 @@ void PhotonTracerCL::tracePhotons(PhotonData* photonData, const VolumeCLBase* vo
     }
     //size_t globalWorkSizeY = getGlobalWorkGroupSize(nPhotons.y, workGroupSize_.y);
     OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(*kernel, cl::NullRange, globalWorkSize,
-        workGroupSize_.x*workGroupSize_.y, waitForEvents, event);
+                                                      workGroupSize_.x*workGroupSize_.y, waitForEvents, event);
 }
 
 void PhotonTracerCL::setRandomSeedSize(size_t nPhotons) {
@@ -182,7 +184,7 @@ void PhotonTracerCL::setRandomSeedSize(size_t nPhotons) {
 void PhotonTracerCL::setNoSingleScattering(bool onlyMultipleScattering) {
     onlyMultipleScattering_ = onlyMultipleScattering;
     compileKernels();
-
+    
 }
 
 void PhotonTracerCL::setProgressive(bool val) {

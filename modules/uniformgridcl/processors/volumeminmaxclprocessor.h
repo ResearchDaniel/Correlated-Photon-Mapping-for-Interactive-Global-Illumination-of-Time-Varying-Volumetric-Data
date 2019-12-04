@@ -35,6 +35,8 @@
 #include <inviwo/core/common/inviwo.h>
 #include <inviwo/core/datastructures/buffer/buffer.h>
 #include <inviwo/core/ports/volumeport.h>
+#include <inviwo/core/properties/boolproperty.h>
+#include <inviwo/core/properties/ordinalproperty.h>
 #include <inviwo/core/processors/processor.h>
 
 #include <modules/opencl/inviwoopencl.h>
@@ -64,7 +66,7 @@ namespace inviwo {
 /**
  * \class VolumeMinMaxCLProcessor
  *
- * \brief <brief description> 
+ * \brief <brief description>
  *
  * <Detailed description from a developer prespective>
  */
@@ -74,26 +76,24 @@ public:
     static const ProcessorInfo processorInfo_;
     VolumeMinMaxCLProcessor();
     virtual ~VolumeMinMaxCLProcessor() = default;
-     
+    
     virtual void process() override;
-
+    
     std::unique_ptr<MinMaxUniformGrid3D> compute(const Volume* volume);
-
-    virtual bool isReady() const override;
-
+    
     void executeVolumeOperation(const Volume* volume, const VolumeCLBase* volumeCL, BufferCLBase* volumeOutCL, const size3_t& outDim, const size3_t& globalWorkGroupSize, const size3_t& localWorkgroupSize);
-private:
+    private:
     VolumeInport inport_;
     UniformGrid3DOutport outport_;
-
+    
     // Vector in/out
     VolumeSequenceInport vectorInport_;
     UniformGrid3DVectorOutport vectorOutport_;
-
+    
     IntProperty volumeRegionSize_;
     IntVec3Property workGroupSize_;
     BoolProperty useGLSharing_;
-
+    
     
     cl::Kernel* kernel_;
 };

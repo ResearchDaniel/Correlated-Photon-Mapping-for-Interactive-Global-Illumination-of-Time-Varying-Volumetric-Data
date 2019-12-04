@@ -88,10 +88,20 @@ private:
 };
 
 template<>
-struct port_traits<SampleGenerator2DCL> {
-    static std::string class_identifier() { return "SampleGenerator2DCL"; }
-    static uvec3 color_code() { return uvec3(0, 168, 119); } // Green (Munsell)
-    static std::string data_info(const SampleGenerator2DCL* data) { return "SampleGenerator2DCL"; }
+struct DataTraits<SampleGenerator2DCL> {
+    static std::string classIdentifier() { return "org.inviwo.samplegenerator2dcl"; }
+    static std::string dataName() { return "SampleGenerator2DCL"; }
+    static uvec3 colorCode() { return uvec3(0, 168, 119); } // Green (Munsell)
+    static std::string info(const SampleGenerator2DCL& data) {
+        using H = utildoc::TableBuilder::Header;
+        using P = Document::PathComponent;
+        Document doc;
+        doc.append("b", "SampleGenerator2DCL", { { "style", "color:white;" } });
+        utildoc::TableBuilder tb(doc.handle(), P::end());
+        tb(H("Work group size"), data.getWorkGroupSize());
+        tb(H("Use GL sharing"), data.getUseGLSharing() ? "Yes" : "No");
+        return doc;
+    }
 };
 using SampleGenerator2DCLInport = DataInport<SampleGenerator2DCL>;
 using SampleGenerator2DCLOutport = DataOutport<SampleGenerator2DCL>;

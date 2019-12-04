@@ -34,10 +34,9 @@
 #include <modules/opencl/syncclgl.h>
 #include <modules/opencl/buffer/buffercl.h>
 #include <modules/opencl/buffer/bufferclgl.h>
-#include <modules/opencl/buffer/elementbufferclgl.h>
 #include <modules/opencl/volume/volumecl.h>
 #include <modules/opencl/volume/volumeclgl.h>
-#ifdef IVW_PROFILING 
+#ifdef IVW_PROFILING
 #define IVW_DETAILED_PROFILING
 #endif
 namespace inviwo {
@@ -55,24 +54,24 @@ const ProcessorInfo PhotonToLightVolumeProcessorCL::getProcessorInfo() const {
 }
 
 PhotonToLightVolumeProcessorCL::PhotonToLightVolumeProcessorCL()
-    : Processor()
-    , volumeInport_("volume")
-    , photons_("photons")
-    , recomputedPhotonIndicesPort_("recomputedPhotonIndices")
-    , outport_("lightvolume")
-    , incrementalRecomputationThreshold_("incrementalRecomputationThreshold", "Max % invalid photons to use add-remove", 50.f, 0.f, 100.f, 10.f)
-    , volumeSizeOption_("volumeSizeOption", "Light Volume Size")
-    , volumeDataTypeOption_("volumeDataType", "Output data type")
-    , information_("Information", "Light volume information")
-    //, camera_("camera", "Camera", vec3(0.0f, 0.0f, -2.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), nullptr, InvalidationLevel::Valid)
-    , alignChangedPhotons_("alignChangedPhotons", "Mem-align changed photons", false)
-    , workGroupSize_("wgsize", "Work group size", 128, 1, 2048)
-    , useGLSharing_("glsharing", "Use OpenGL sharing", true)
-    , kernelOwner_(this)
-    , kernel_(nullptr)
-    , splatSelectedPhotonsKernel_(nullptr)
-    , clearFloatsKernel_(nullptr)
-    , lightVolume_(std::make_shared<Volume>(size3_t(1), DataFloat32::get()))
+: Processor()
+, volumeInport_("volume")
+, photons_("photons")
+, recomputedPhotonIndicesPort_("recomputedPhotonIndices")
+, outport_("lightvolume")
+, incrementalRecomputationThreshold_("incrementalRecomputationThreshold", "Max % invalid photons to use add-remove", 50.f, 0.f, 100.f, 10.f)
+, volumeSizeOption_("volumeSizeOption", "Light Volume Size")
+, volumeDataTypeOption_("volumeDataType", "Output data type")
+, information_("Information", "Light volume information")
+//, camera_("camera", "Camera", vec3(0.0f, 0.0f, -2.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), nullptr, InvalidationLevel::Valid)
+, alignChangedPhotons_("alignChangedPhotons", "Mem-align changed photons", false)
+, workGroupSize_("wgsize", "Work group size", 128, 1, 2048)
+, useGLSharing_("glsharing", "Use OpenGL sharing", true)
+, kernelOwner_(this)
+, kernel_(nullptr)
+, splatSelectedPhotonsKernel_(nullptr)
+, clearFloatsKernel_(nullptr)
+, lightVolume_(std::make_shared<Volume>(size3_t(1), DataFloat32::get()))
 {
     addPort(volumeInport_);
     addPort(photons_);
@@ -83,16 +82,16 @@ PhotonToLightVolumeProcessorCL::PhotonToLightVolumeProcessorCL()
     });
     addPort(recomputedPhotonIndicesPort_);
     addPort(outport_);
-
+    
     outport_.onDisconnect([this]() {
         prevPhotons_.setSize(0);
         changedAlignedPhotons_.setSize(0);
     });
-
+    
     volumeInport_.onChange(std::bind(&PhotonToLightVolumeProcessorCL::volumeSizeOptionChanged, this));
-
+    
     addProperty(incrementalRecomputationThreshold_);
-
+    
     volumeSizeOption_.addOption("radius", "Photon radius", 0);
     volumeSizeOption_.addOption("1", "Full of incoming volume", 1);
     volumeSizeOption_.addOption("1/2", "Half of incoming volume", 2);
@@ -101,7 +100,7 @@ PhotonToLightVolumeProcessorCL::PhotonToLightVolumeProcessorCL()
     volumeSizeOption_.setSelectedIndex(0);
     volumeSizeOption_.setCurrentStateAsDefault();
     volumeSizeOption_.onChange(this, &PhotonToLightVolumeProcessorCL::volumeSizeOptionChanged);
-
+    
     //volumeDataTypeOption_.addOption("float16", "float16");
     volumeDataTypeOption_.addOption("float32", "float32");
     //volumeDataTypeOption_.addOption("4xfloat16", "4 x float16");
@@ -109,7 +108,7 @@ PhotonToLightVolumeProcessorCL::PhotonToLightVolumeProcessorCL()
     volumeDataTypeOption_.setSelectedIndex(0);
     volumeDataTypeOption_.setCurrentStateAsDefault();
     volumeDataTypeOption_.onChange([this]() {
-
+        
         if (volumeDataTypeOption_.getSelectedValue() == "float16") {
             lightVolume_ = std::make_shared<Volume>(lightVolume_->getDimensions(), DataFloat16::get());
         } else if (volumeDataTypeOption_.getSelectedValue() == "float32") {
@@ -128,15 +127,15 @@ PhotonToLightVolumeProcessorCL::PhotonToLightVolumeProcessorCL()
     addProperty(alignChangedPhotons_);
     addProperty(workGroupSize_);
     addProperty(useGLSharing_);
-
+    
     //addProperty(camera_);
-
+    
     outport_.setData(lightVolume_);
     buildKernel();
 }
 
 void PhotonToLightVolumeProcessorCL::process() {
-
+    
     if (kernel_ == NULL) {
         return;
     }
@@ -149,7 +148,7 @@ void PhotonToLightVolumeProcessorCL::process() {
         // Add one to each dimension to get rid of clamp functions in the photonTracerKernel
         //int maxDim = std::max(volumeDims.x, std::max(volumeDims.y, volumeDims.z));
         //photonMapSizeProp_.set(2+tgt::ivec3(static_cast<int>(static_cast<float>(maxDim)/radiusInVoxels)));
-
+        
         //ivec3 hashTableDimensions(2 + ivec3(static_cast<int>(invPhotonRadius)));
         auto lightVolumeDimensions(size3_t(static_cast<size_t>(std::ceil(invPhotonRadius))));
         if (glm::any(glm::notEqual(lightVolume_->getDimensions(), lightVolumeDimensions))) {
@@ -162,11 +161,11 @@ void PhotonToLightVolumeProcessorCL::process() {
             changedAlignedPhotons_.setSize(0);
         }
     }
-
+    
     const size3_t outDim{ lightVolume_->getDimensions() };
     size_t outDimFlattened = outDim.x * outDim.y * outDim.z;
     if (tmpVolume_.getSize() != outDimFlattened*lightVolume_->getDataFormat()->getSize()) {
-
+        
         tmpVolume_.setSize(outDimFlattened*lightVolume_->getDataFormat()->getSize());
     }
     size_t localWorkGroupSize(workGroupSize_.get());
@@ -175,27 +174,27 @@ void PhotonToLightVolumeProcessorCL::process() {
         //IVW_CPU_PROFILING("Wait for copy prev photons (CPU)")
         // Wait for previous photons to be copied
         cl::WaitForEvents(copyPrevPhotonsEvent_);
-//#ifdef IVW_DETAILED_PROFILING
-//        LogInfo("Copy prev: " << copyPrevPhotonsEvent_[0].getElapsedTime() << " ms");
-//#endif
+        //#ifdef IVW_DETAILED_PROFILING
+        //        LogInfo("Copy prev: " << copyPrevPhotonsEvent_[0].getElapsedTime() << " ms");
+        //#endif
         copyPrevPhotonsEvent_.clear();
     }
-    if (recomputedPhotonIndicesPort_.isReady() && prevPhotons_.getSize() == photonData->photons_.getSize() && recomputedPhotonIndicesPort_.getData()->nRecomputedPhotons > 0 && recomputedPhotonIndicesPort_.getData()->nRecomputedPhotons < maxRecomputationPhotons) {       
+    if (recomputedPhotonIndicesPort_.isReady() && prevPhotons_.getSize() == photonData->photons_.getSize() && recomputedPhotonIndicesPort_.getData()->nRecomputedPhotons > 0 && recomputedPhotonIndicesPort_.getData()->nRecomputedPhotons < maxRecomputationPhotons) {
         SyncCLGL glSync;
         auto recomputedPhotonIndices = recomputedPhotonIndicesPort_.getData();
         size_t globalWorkGroupSize(getGlobalWorkGroupSize(recomputedPhotonIndicesPort_.getData()->nRecomputedPhotons, localWorkGroupSize));
         auto volumeOutCL = lightVolume_->getEditableRepresentation<VolumeCLGL>();
         auto prevPhotonsCL = prevPhotons_.getRepresentation<BufferCL>();
         auto photonsCL = photonData->photons_.getRepresentation<BufferCLGL>();
-        auto indicesCL = recomputedPhotonIndices->indicesToRecomputedPhotons.getRepresentation<ElementBufferCLGL>();
-
+        auto indicesCL = recomputedPhotonIndices->indicesToRecomputedPhotons.getRepresentation<BufferCLGL>();
+        
         glSync.addToAquireGLObjectList(volumeOutCL);
         glSync.addToAquireGLObjectList(photonsCL);
         glSync.addToAquireGLObjectList(indicesCL);
-            
-
+        
+        
         if (alignChangedPhotons_) {
-            // Is it faster to copy the indexed photons 
+            // Is it faster to copy the indexed photons
             // so that they are aligned when accessing?
             // 10 % faster on Geforce 670, but 1-2 % slower on 970
             const VolumeCLGL* volumeCL = volume->getRepresentation<VolumeCLGL>();
@@ -218,31 +217,31 @@ void PhotonToLightVolumeProcessorCL::process() {
             copyIndexPhotonsKernel_->setArg(argIndex++, *alignedChangedPhotonsCL);
             copyIndexPhotonsKernel_->setArg(argIndex++, 0);
             OpenCL::getPtr()->getAsyncQueue().enqueueNDRangeKernel(
-                *copyIndexPhotonsKernel_, cl::NullRange, globalWorkGroupSize, localWorkGroupSize, waitForEvents, &copyAlingedPhotonEvents[0]);
-
+                                                                   *copyIndexPhotonsKernel_, cl::NullRange, globalWorkGroupSize, localWorkGroupSize, waitForEvents, &copyAlingedPhotonEvents[0]);
+            
             copyIndexPhotonsKernel_->setArg(0, *photonsCL);
             copyIndexPhotonsKernel_->setArg(3, 1.f);
             copyIndexPhotonsKernel_->setArg(7, static_cast<int>(recomputedPhotonIndices->nRecomputedPhotons));
-            OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(
-                *copyIndexPhotonsKernel_, cl::NullRange, globalWorkGroupSize, localWorkGroupSize, nullptr, &copyAlingedPhotonEvents[1]);
-
-
-
+            OpenCL::getPtr()->getAsyncQueue().enqueueNDRangeKernel(
+                                                                   *copyIndexPhotonsKernel_, cl::NullRange, globalWorkGroupSize, localWorkGroupSize, nullptr, &copyAlingedPhotonEvents[1]);
+            
+            
+            
             size_t splatGlobalWorkGroupSize(getGlobalWorkGroupSize(2 * recomputedPhotonIndicesPort_.getData()->nRecomputedPhotons, localWorkGroupSize));
             executeVolumeOperation(volume, volumeCL, volumeOutCL, alignedChangedPhotonsCL, lightVolume_.get(), outDim,
-                splatGlobalWorkGroupSize, localWorkGroupSize, &copyAlingedPhotonEvents, &splatAlingedPhotonEvents[0], &splatAlingedPhotonEvents[1]);
-
+                                   splatGlobalWorkGroupSize, localWorkGroupSize, &copyAlingedPhotonEvents, &splatAlingedPhotonEvents[0], &splatAlingedPhotonEvents[1]);
+            
 #ifdef IVW_DETAILED_PROFILING
             try {
-                // Measure both computation and copy 
+                // Measure both computation and copy
                 cl::WaitForEvents(splatAlingedPhotonEvents);
                 float copy = 0;
                 for (auto interaction = 0; interaction < copyAlingedPhotonEvents.size(); ++interaction) {
                     copy += copyAlingedPhotonEvents[interaction].getElapsedTime();
                 }
                 LogInfo("Exec time (copy, computation, copy): "
-                    << copy << " + " << splatAlingedPhotonEvents[0].getElapsedTime() << " + " << splatAlingedPhotonEvents[1].getElapsedTime() << " = "
-                    << copy + splatAlingedPhotonEvents[0].getElapsedTime() + splatAlingedPhotonEvents[1].getElapsedTime() << " ms");
+                        << copy << " + " << splatAlingedPhotonEvents[0].getElapsedTime() << " + " << splatAlingedPhotonEvents[1].getElapsedTime() << " = "
+                        << copy + splatAlingedPhotonEvents[0].getElapsedTime() + splatAlingedPhotonEvents[1].getElapsedTime() << " ms");
             } catch (cl::Error& err) {
                 LogError(getCLErrorString(err));
             }
@@ -254,22 +253,22 @@ void PhotonToLightVolumeProcessorCL::process() {
             cl::Event copyEvent;
             // Remove old contribution
             photonsToLightVolume(volumeOutCL, prevPhotonsCL, indicesCL, *photonData, *recomputedPhotonIndices, -1.f, lightVolume_.get(), outDim,
-                globalWorkGroupSize,
-                localWorkGroupSize, nullptr, &removePhotonsEvents[0]);
+                                 globalWorkGroupSize,
+                                 localWorkGroupSize, nullptr, &removePhotonsEvents[0]);
             // Add new contribution
             photonsToLightVolume(volumeOutCL, photonsCL, indicesCL, *photonData, *recomputedPhotonIndices, 1.f, lightVolume_.get(), outDim,
-                globalWorkGroupSize,
-                localWorkGroupSize, &removePhotonsEvents, &addPhotonsEvents[0]);
-
-
+                                 globalWorkGroupSize,
+                                 localWorkGroupSize, &removePhotonsEvents, &addPhotonsEvents[0]);
+            
+            
             auto tmpVolumeCL = tmpVolume_.getRepresentation<BufferCL>();
             OpenCL::getPtr()->getQueue().enqueueCopyBufferToImage(
-                tmpVolumeCL->get(), volumeOutCL->getEditable(), 0, size3_t(0), size3_t(outDim),
-                &addPhotonsEvents, &copyEvent);
-
+                                                                  tmpVolumeCL->get(), volumeOutCL->getEditable(), 0, size3_t(0), size3_t(outDim),
+                                                                  &addPhotonsEvents, &copyEvent);
+            
 #ifdef IVW_DETAILED_PROFILING
             try {
-                // Measure both computation and copy 
+                // Measure both computation and copy
                 copyEvent.wait();
                 float remove = 0, add = 0;
                 for (auto interaction = 0; interaction < removePhotonsEvents.size(); ++interaction) {
@@ -277,8 +276,8 @@ void PhotonToLightVolumeProcessorCL::process() {
                     add += addPhotonsEvents[interaction].getElapsedTime();
                 }
                 LogInfo("Exec time (remove, add, copy): "
-                    << remove << " + " << add << " + " << copyEvent.getElapsedTime() << " = "
-                    << remove + add + copyEvent.getElapsedTime() << " ms");
+                        << remove << " + " << add << " + " << copyEvent.getElapsedTime() << " = "
+                        << remove + add + copyEvent.getElapsedTime() << " ms");
             } catch (cl::Error& err) {
                 LogError(getCLErrorString(err));
             }
@@ -287,14 +286,14 @@ void PhotonToLightVolumeProcessorCL::process() {
     } else if (prevPhotons_.getSize() != photonData->photons_.getSize() || (recomputedPhotonIndicesPort_.getData()->nRecomputedPhotons < 0) || recomputedPhotonIndicesPort_.getData()->nRecomputedPhotons >= maxRecomputationPhotons) {
         cl::Event events[3];
         //
-        // prevPhotons_.getSize() != photonData->photons_.getSize() 
+        // prevPhotons_.getSize() != photonData->photons_.getSize()
         size_t globalWorkGroupSize(getGlobalWorkGroupSize(photonData->getNumberOfPhotons()*photonData->getMaxPhotonInteractions(), localWorkGroupSize));
         
         BufferCL* tmpVolumeCL = tmpVolume_.getEditableRepresentation<BufferCL>();
         //size_t outDimFlattened = outDim.x * outDim.y * outDim.z;
         //clearBuffer(tmpVolumeCL, outDimFlattened, localWorkGroupSize, nullptr, &events[0]);
         OpenCL::getPtr()->getQueue().enqueueFillBuffer<float>(tmpVolumeCL->getEditable(), 0.f, 0, tmpVolume_.getSizeInBytes(), nullptr, &events[0
-        ]);
+                                                                                                                                                ]);
         if (useGLSharing_.get()) {
             SyncCLGL glSync;
             const VolumeCLGL* volumeCL = volume->getRepresentation<VolumeCLGL>();
@@ -306,12 +305,12 @@ void PhotonToLightVolumeProcessorCL::process() {
                 glSync.addToAquireGLObjectList(volumeOutCL);
                 glSync.addToAquireGLObjectList(photonsCL);
                 glSync.aquireAllObjects();
-
+                
                 executeVolumeOperation(volume, volumeCL, volumeOutCL, photonsCL, lightVolume_.get(), outDim,
-                    globalWorkGroupSize,
-                    localWorkGroupSize, nullptr, &events[1], &events[2]);
+                                       globalWorkGroupSize,
+                                       localWorkGroupSize, nullptr, &events[1], &events[2]);
             }
-
+            
         } else {
             const VolumeCL* volumeCL = volume->getRepresentation<VolumeCL>();
             VolumeCL* volumeOutCL = lightVolume_->getEditableRepresentation<VolumeCL>();
@@ -319,24 +318,24 @@ void PhotonToLightVolumeProcessorCL::process() {
             BufferCL* tmpVolumeCL = tmpVolume_.getEditableRepresentation<BufferCL>();
             clearBuffer(tmpVolumeCL, outDimFlattened, localWorkGroupSize, nullptr, &events[0]);
             executeVolumeOperation(volume, volumeCL, volumeOutCL, photonsCL, lightVolume_.get(), outDim,
-                globalWorkGroupSize,
-                localWorkGroupSize, nullptr, &events[1], &events[2]);
+                                   globalWorkGroupSize,
+                                   localWorkGroupSize, nullptr, &events[1], &events[2]);
         }
 #ifdef IVW_DETAILED_PROFILING
         try {
-            // Measure both computation and copy 
+            // Measure both computation and copy
             events[2].wait();
             LogInfo("Exec time (clear, computation, copy): "
-                << events[0].getElapsedTime() << " + " << events[1].getElapsedTime() << " + " << events[2].getElapsedTime() << " = "
-                << events[0].getElapsedTime() + events[1].getElapsedTime() + events[2].getElapsedTime() << " ms");
+                    << events[0].getElapsedTime() << " + " << events[1].getElapsedTime() << " + " << events[2].getElapsedTime() << " = "
+                    << events[0].getElapsedTime() + events[1].getElapsedTime() + events[2].getElapsedTime() << " ms");
         } catch (cl::Error& err) {
             LogError(getCLErrorString(err));
         }
 #endif
     }
     
-
-
+    
+    
     if (recomputedPhotonIndicesPort_.isReady() && recomputedPhotonIndicesPort_.getData()->nRecomputedPhotons != 0) {
         copyPrevPhotonsEvent_.emplace_back(cl::Event());
         if (prevPhotons_.getSize() != photonData->photons_.getSize()) {
@@ -349,136 +348,133 @@ void PhotonToLightVolumeProcessorCL::process() {
             SyncCLGL glSync;
             glSync.addToAquireGLObjectList(photonsCL);
             glSync.aquireAllObjects();
-            OpenCL::getPtr()->getQueue().enqueueCopyBuffer(
-                photonsCL->get(), prevPhotonsCL->getEditable(), 0, size_t(0), photonData->photons_.getSizeInBytes(), nullptr, &copyPrevPhotonsEvent_.back());
+            OpenCL::getPtr()->getAsyncQueue().enqueueCopyBuffer(
+                                                                photonsCL->get(), prevPhotonsCL->getEditable(), 0, size_t(0), photonData->photons_.getSizeInBytes(), nullptr, &copyPrevPhotonsEvent_.back());
         } else {
             auto photonsCL = photonData->photons_.getRepresentation<BufferCL>();
             auto prevPhotonsCL = prevPhotons_.getEditableRepresentation<BufferCL>();
-            OpenCL::getPtr()->getQueue().enqueueCopyBuffer(
-                photonsCL->get(), prevPhotonsCL->getEditable(), 0, size_t(0), photonData->photons_.getSizeInBytes(), nullptr, &copyPrevPhotonsEvent_.back());
+            OpenCL::getPtr()->getAsyncQueue().enqueueCopyBuffer(
+                                                                photonsCL->get(), prevPhotonsCL->getEditable(), 0, size_t(0), photonData->photons_.getSizeInBytes(), nullptr, &copyPrevPhotonsEvent_.back());
         }
     }
-
+    
 }
 
 void PhotonToLightVolumeProcessorCL::executeVolumeOperation(const Volume* volume,
-    const VolumeCLBase* volumeCL,
-    VolumeCLBase* volumeOutCL, const BufferCLBase* photonsCL, const Volume* volumeOut, const size3_t& outDim,
-    const size_t& globalWorkGroupSize,
-    const size_t& localWorkgroupSize, std::vector<cl::Event>* waitForEvents, cl::Event* splatEvent, cl::Event* copyEvent) {
-
-    size_t outDimFlattened = outDim.x * outDim.y * outDim.z;
-
-
+                                                            const VolumeCLBase* volumeCL,
+                                                            VolumeCLBase* volumeOutCL, const BufferCLBase* photonsCL, const Volume* volumeOut, const size3_t& outDim,
+                                                            const size_t& globalWorkGroupSize,
+                                                            const size_t& localWorkgroupSize, std::vector<cl::Event>* waitForEvents, cl::Event* splatEvent, cl::Event* copyEvent) {
+    
     BufferCL* tmpVolumeCL = tmpVolume_.getEditableRepresentation<BufferCL>();
-
+    
     try {
         
         int argIndex = 0;
         kernel_->setArg(argIndex++, *volumeCL);
         kernel_->setArg(argIndex++,
-            *(volumeCL->getVolumeStruct(volume)
-            .getRepresentation<BufferCL>()));  // Scaling for 12-bit data
+                        *(volumeCL->getVolumeStruct(volume)
+                          .getRepresentation<BufferCL>()));  // Scaling for 12-bit data
         kernel_->setArg(argIndex++, *tmpVolumeCL);
-
+        
         kernel_->setArg(argIndex++,
-            *(volumeOutCL->getVolumeStruct(volumeOut)
-            .getRepresentation<BufferCL>()));  // Scaling for 12-bit data
-
+                        *(volumeOutCL->getVolumeStruct(volumeOut)
+                          .getRepresentation<BufferCL>()));  // Scaling for 12-bit data
+        
         kernel_->setArg(argIndex++, ivec4(outDim, 0));
         // Photon params
         kernel_->setArg(argIndex++, *photonsCL);
         kernel_->setArg(argIndex++, static_cast<int>(photons_.getData()->getNumberOfPhotons()));
         kernel_->setArg(argIndex++, static_cast<float>(photons_.getData()->getRadiusRelativeToSceneSize()));
         const PhotonData* inputPhotons = photons_.getData().get();
-        // Use photon scale to get equivalent appearance when normalizing light volume 
-        auto nPhotonsScale = static_cast<double>(inputPhotons->getNumberOfPhotons()) / static_cast<double>(PhotonData::defaultNumberOfPhotons);
+        // Use photon scale to get equivalent appearance when normalizing light volume
+        //auto nPhotonsScale = static_cast<double>(inputPhotons->getNumberOfPhotons()) / static_cast<double>(PhotonData::defaultNumberOfPhotons);
         //float nPhotonsScale = static_cast<float>(PhotonData::defaultNumberOfPhotons) / static_cast<float>(photons_.getData()->getNumberOfPhotons());
         // Scale with lightVolumeSizeScale to get the same look for different light volume sizes.
-        double referenceRadiusVolumeScale = PhotonData::sphereVolume(inputPhotons->getRadiusRelativeToSceneSize()) / PhotonData::sphereVolume(PhotonData::defaultRadiusRelativeToSceneRadius);
+        //double referenceRadiusVolumeScale = PhotonData::sphereVolume(inputPhotons->getRadiusRelativeToSceneSize()) / PhotonData::sphereVolume(PhotonData::defaultRadiusRelativeToSceneRadius);
         double nPhotons = static_cast<double>(inputPhotons->getNumberOfPhotons());
         double photonVolume = PhotonData::sphereVolume(inputPhotons->getRadiusRelativeToSceneSize());
         kernel_->setArg(argIndex++, static_cast<float>(PhotonData::scaleToMakeLightPowerOfOneVisibleForDirectionalLightSource / (photonVolume*nPhotons)));
-
+        
         OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(
-            *kernel_, cl::NullRange, globalWorkGroupSize, localWorkgroupSize, waitForEvents, splatEvent);
-
+                                                          *kernel_, cl::NullRange, globalWorkGroupSize, localWorkgroupSize, waitForEvents, splatEvent);
+        
         std::vector<cl::Event> waitForPhotonToLightVolume(1, *splatEvent);
-
+        
         //photonDensityNormalizationKernel_->setArg(0, *tmpVolumeCL);
         ////LogInfo("N components" << lightVolume_->getDataFormat()->getComponents());
         //photonDensityNormalizationKernel_->setArg(1, static_cast<int>(outDimFlattened));
         //OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(
         //    *photonDensityNormalizationKernel_, cl::NullRange, getGlobalWorkGroupSize(outDimFlattened, localWorkgroupSize), localWorkgroupSize, &waitForPhotonToLightVolume, &events[2]);
-
-
+        
+        
         //std::vector<cl::Event> waitForNormalization(1, events[2]);
-
+        
         OpenCL::getPtr()->getQueue().enqueueCopyBufferToImage(
-            tmpVolumeCL->get(), volumeOutCL->getEditable(), 0, size3_t(0), size3_t(outDim),
-            &waitForPhotonToLightVolume, copyEvent);
+                                                              tmpVolumeCL->get(), volumeOutCL->getEditable(), 0, size3_t(0), size3_t(outDim),
+                                                              &waitForPhotonToLightVolume, copyEvent);
     } catch (cl::Error& err) {
         LogError(getCLErrorString(err));
     }
-
-
+    
+    
 }
 
 void PhotonToLightVolumeProcessorCL::clearBuffer(BufferCL* tmpVolumeCL, size_t outDimFlattened, const size_t& localWorkgroupSize, std::vector<cl::Event>* waitForEvents, cl::Event * events) {
     try {
-
+        
         clearFloatsKernel_->setArg(0, *tmpVolumeCL);
         //LogInfo("N components" << lightVolume_->getDataFormat()->getComponents());
         clearFloatsKernel_->setArg(1, static_cast<int>(outDimFlattened));
         OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(
-            *clearFloatsKernel_, cl::NullRange, getGlobalWorkGroupSize(outDimFlattened, localWorkgroupSize), localWorkgroupSize, nullptr, events);
-
+                                                          *clearFloatsKernel_, cl::NullRange, getGlobalWorkGroupSize(outDimFlattened, localWorkgroupSize), localWorkgroupSize, nullptr, events);
+        
     } catch (cl::Error& err) {
         LogError(getCLErrorString(err));
     }
 }
 
 void PhotonToLightVolumeProcessorCL::photonsToLightVolume(VolumeCLBase* volumeOutCL, const BufferCLBase* photonsCL, const BufferCLBase* photonIndices, const PhotonData& photons, const RecomputedPhotonIndices& recomputedPhotons, float radianceMultiplier, const Volume* volumeOut, const size3_t& outDim,
-    const size_t& globalWorkGroupSize,
-    const size_t& localWorkgroupSize, std::vector<cl::Event>* waitForEvents, cl::Event* event) {
-
+                                                          const size_t& globalWorkGroupSize,
+                                                          const size_t& localWorkgroupSize, std::vector<cl::Event>* waitForEvents, cl::Event* event) {
+    
     size_t outDimFlattened = outDim.x * outDim.y * outDim.z;
-
+    
     if (tmpVolume_.getSize() != outDimFlattened*volumeOut->getDataFormat()->getSize()) {
         tmpVolume_.setSize(outDimFlattened*volumeOut->getDataFormat()->getSize());
     }
     BufferCL* tmpVolumeCL = tmpVolume_.getEditableRepresentation<BufferCL>();
     try {
-
+        
         int argIndex = 0;
         splatSelectedPhotonsKernel_->setArg(argIndex++, *tmpVolumeCL);
-
+        
         splatSelectedPhotonsKernel_->setArg(argIndex++,
-            *(volumeOutCL->getVolumeStruct(volumeOut)
-            .getRepresentation<BufferCL>()));  // Scaling for 12-bit data
-
+                                            *(volumeOutCL->getVolumeStruct(volumeOut)
+                                              .getRepresentation<BufferCL>()));  // Scaling for 12-bit data
+        
         splatSelectedPhotonsKernel_->setArg(argIndex++, ivec4(outDim, 0));
         // Photon params
         splatSelectedPhotonsKernel_->setArg(argIndex++, *photonsCL);
         splatSelectedPhotonsKernel_->setArg(argIndex++, *photonIndices);
         splatSelectedPhotonsKernel_->setArg(argIndex++, static_cast<int>(recomputedPhotons.nRecomputedPhotons));
         splatSelectedPhotonsKernel_->setArg(argIndex++, static_cast<float>(photons.getRadiusRelativeToSceneSize()));
-        // Use photon scale to get equivalent appearance when normalizing light volume 
-        auto nPhotonsScale = static_cast<double>(photons.getNumberOfPhotons()) / static_cast<double>(PhotonData::defaultNumberOfPhotons);
+        // Use photon scale to get equivalent appearance when normalizing light volume
+        //auto nPhotonsScale = static_cast<double>(photons.getNumberOfPhotons()) / static_cast<double>(PhotonData::defaultNumberOfPhotons);
         //float nPhotonsScale = static_cast<float>(PhotonData::defaultNumberOfPhotons) / static_cast<float>(photons_.getData()->getNumberOfPhotons());
         // Scale with lightVolumeSizeScale to get the same look for different light volume sizes.
-        double referenceRadiusVolumeScale = PhotonData::sphereVolume(photons.getRadiusRelativeToSceneSize()) / PhotonData::sphereVolume(PhotonData::defaultRadiusRelativeToSceneRadius);
+        //double referenceRadiusVolumeScale = PhotonData::sphereVolume(photons.getRadiusRelativeToSceneSize()) / PhotonData::sphereVolume(PhotonData::defaultRadiusRelativeToSceneRadius);
         double nPhotons = static_cast<double>(photons.getNumberOfPhotons());
         double photonVolume = PhotonData::sphereVolume(photons.getRadiusRelativeToSceneSize());
         splatSelectedPhotonsKernel_->setArg(argIndex++, static_cast<float>(PhotonData::scaleToMakeLightPowerOfOneVisibleForDirectionalLightSource / (photonVolume*nPhotons)));
         splatSelectedPhotonsKernel_->setArg(argIndex++, radianceMultiplier);
         splatSelectedPhotonsKernel_->setArg(argIndex++, static_cast<int>(photons.getNumberOfPhotons()));
         splatSelectedPhotonsKernel_->setArg(argIndex++, static_cast<int>(photons.getMaxPhotonInteractions()));
-
+        
         OpenCL::getPtr()->getAsyncQueue().enqueueNDRangeKernel(
-            *splatSelectedPhotonsKernel_, cl::NullRange, globalWorkGroupSize, localWorkgroupSize, waitForEvents, event);
-
-
+                                                               *splatSelectedPhotonsKernel_, cl::NullRange, globalWorkGroupSize, localWorkgroupSize, waitForEvents, event);
+        
+        
     } catch (cl::Error& err) {
         LogError(getCLErrorString(err));
     }
@@ -497,7 +493,7 @@ void PhotonToLightVolumeProcessorCL::volumeSizeOptionChanged() {
             prevPhotons_.setSize(0);
         }
     }
-
+    
 }
 
 void PhotonToLightVolumeProcessorCL::buildKernel() {
@@ -515,10 +511,10 @@ void PhotonToLightVolumeProcessorCL::buildKernel() {
     //kernel_ = kernelOwner_.addKernel("photonstolightvolume.cl", "photonsToLightVolumeKernel", "", defines.str());
     kernel_ = kernelOwner_.addKernel("photonstolightvolume.cl", "splatPhotonsToLightVolumeKernel", "", defines.str());
     splatSelectedPhotonsKernel_ = kernelOwner_.addKernel("photonstolightvolume.cl", "splatSelectedPhotonsToLightVolumeKernel", "", defines.str());
-
+    
     photonDensityNormalizationKernel_ = kernelOwner_.addKernel("photonstolightvolume.cl", "photonDensityNormalizationKernel", "", defines.str());
     copyIndexPhotonsKernel_ = kernelOwner_.addKernel("photonstolightvolume.cl", "copyIndexPhotonsKernel", "", defines.str());
-
+    
 }
 
 } // namespace

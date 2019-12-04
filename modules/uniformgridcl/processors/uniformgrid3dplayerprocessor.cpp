@@ -30,7 +30,7 @@
 #include "uniformgrid3dplayerprocessor.h"
 
 namespace inviwo {
-
+    
 // The Class Identifier has to be globally unique. Use a reverse DNS naming scheme
 const ProcessorInfo UniformGrid3DPlayerProcessor::processorInfo_{
     "org.inviwo.UniformGrid3DPlayerProcessor",      // Class identifier
@@ -44,20 +44,20 @@ const ProcessorInfo UniformGrid3DPlayerProcessor::getProcessorInfo() const {
 }
 
 UniformGrid3DPlayerProcessor::UniformGrid3DPlayerProcessor()
-    : Processor()
-    , inport_("Sequence")
-    , outport_("InterpolatedData")
-    , time_("time", "Time", 0.f, 0.f, 0.f)
-    , index_("selectedSequenceIndex", "Sequence index", 1, 1, 1)
-    , timePerElement_("timePerElement", "Time Per element (s)", 1.f, 0.01f, 10.f, 0.01f)
-    , playSequence_("playSequence", "Play Sequence", false)
-    , frameRate_("frameRate", "Frame rate", 10, 1, 60, 1, InvalidationLevel::Valid)
-    , sequenceTimer_(1000 / frameRate_.get(), [this](){ onSequenceTimerEvent(); }) {
+: Processor()
+, inport_("Sequence")
+, outport_("InterpolatedData")
+, time_("time", "Time", 0.f, 0.f, 0.f)
+, index_("selectedSequenceIndex", "Sequence index", 1, 1, 1)
+, timePerElement_("timePerElement", "Time Per element (s)", 1.f, 0.01f, 10.f, 0.01f)
+, playSequence_("playSequence", "Play Sequence", false)
+, frameRate_("frameRate", "Frame rate", 10, 1, 60, 1, InvalidationLevel::Valid)
+, sequenceTimer_(Timer::Milliseconds(1000 / frameRate_.get()), [this](){ onSequenceTimerEvent(); }) {
     
     addPort(inport_);
     inport_.onChange([this]() {
         onTimeStepChange();
-
+        
     });
     addPort(outport_);
     addProperty(time_);
@@ -68,22 +68,22 @@ UniformGrid3DPlayerProcessor::UniformGrid3DPlayerProcessor()
     timePerElement_.onChange([this]() {
         onTimeStepChange();
     });
-
+    
     addProperty(frameRate_);
-    frameRate_.onChange([this]() { sequenceTimer_.setInterval(1000 / frameRate_.get()); });
+    frameRate_.onChange([this]() { sequenceTimer_.setInterval(Timer::Milliseconds(1000 / frameRate_.get())); });
     addProperty(playSequence_);
     playSequence_.onChange([this]() {
         time_.setReadOnly(playSequence_);
-
+        
         if (playSequence_) {
-            sequenceTimer_.setInterval(1000 / frameRate_.get());
+            sequenceTimer_.setInterval(Timer::Milliseconds(1000 / frameRate_.get()));
             sequenceTimer_.start();
         } else {
             sequenceTimer_.stop();
         }
     });
 }
-    
+
 void UniformGrid3DPlayerProcessor::process() {
     auto elements = inport_.getData();
     float integerTime;
@@ -104,7 +104,7 @@ void UniformGrid3DPlayerProcessor::process() {
             // pass meta data on
             //outData_->copyMetaDataFrom(*input0);
             //outData_->dataMap_ = input0->dataMap_;
-
+            
         }
         input0->getDataFormat()->dispatch(bufferMixer_, input0.get(), input1.get(), t, outData_);
         //bufferMixer_.mix(*input0->dataget(), *input1, t, *outData_, nullptr);
@@ -123,13 +123,14 @@ void UniformGrid3DPlayerProcessor::onSequenceTimerEvent() {
     }
     time_.set(time);
     updateVolumeIndex();
-
-
+    
+    
 }
 
 void UniformGrid3DPlayerProcessor::updateVolumeIndex() {
     float integerTime;
     // Time between two volumes
+    std::modf(time_ / timePerElement_, &integerTime);
     auto timeStep = static_cast<size_t>(integerTime) % index_.getMaxValue();
     if (timeStep != (index_-1)) {
         index_.set(static_cast<int>(timeStep + 1));

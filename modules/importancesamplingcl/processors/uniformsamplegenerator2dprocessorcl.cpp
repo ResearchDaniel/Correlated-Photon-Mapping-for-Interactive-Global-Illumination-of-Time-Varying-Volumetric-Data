@@ -50,32 +50,33 @@ const ProcessorInfo UniformSampleGenerator2DProcessorCL::getProcessorInfo() cons
 }
 
 UniformSampleGenerator2DProcessorCL::UniformSampleGenerator2DProcessorCL()
-    : Processor(), ProcessorKernelOwner(this)
-    , samplesPort_("samples")
-    , directionalSamplesPort_("DirectionalSamples")
-    , sampleGeneratorPort_("SampleGenerator")
-    , nSamples_("nSamples", "N samples", ivec2(256), ivec2(2), ivec2(2048))
-    , workGroupSize_("wgsize", "Work group size", ivec2(8, 8), ivec2(0), ivec2(256))
-    , useGLSharing_("glsharing", "Use OpenGL sharing", true)
-    , sampleGenerator_(useGLSharing_.get())
-    , samples_(std::make_shared<SampleBuffer>())
-    , directionalSamples_(std::make_shared<SampleBuffer>())
+: Processor(), ProcessorKernelOwner(this)
+, samplesPort_("samples")
+, directionalSamplesPort_("DirectionalSamples")
+, sampleGeneratorPort_("SampleGenerator")
+, nSamples_("nSamples", "N samples", ivec2(256), ivec2(2), ivec2(2048))
+, workGroupSize_("wgsize", "Work group size", ivec2(8, 8), ivec2(0), ivec2(256))
+, useGLSharing_("glsharing", "Use OpenGL sharing", true)
+, samples_(std::make_shared<SampleBuffer>())
+, directionalSamples_(std::make_shared<SampleBuffer>())
+, sampleGenerator_(useGLSharing_.get())
 {
-
+    
     addPort(samplesPort_);
     addPort(directionalSamplesPort_);
-
+    
     addProperty(nSamples_);
     addProperty(workGroupSize_);
     addProperty(useGLSharing_);
-
+    
     samplesPort_.setData(samples_);
     directionalSamplesPort_.setData(directionalSamples_);
+    
 }
 
 void UniformSampleGenerator2DProcessorCL::process() {
     size2_t nSamples(nSamples_.get());
-
+    
     if (directionalSamplesPort_.isConnected()) {
         if (nSamples.x * nSamples.y != samples_->getSize() || nSamples.x * nSamples.y != directionalSamples_->getSize()) {
             samples_->setSize(nSamples.x * nSamples.y);
@@ -91,7 +92,7 @@ void UniformSampleGenerator2DProcessorCL::process() {
         }
         sampleGenerator_.generateNextSamples(*samples_);
     }
-
+    
 }
 
 } // inviwo namespace

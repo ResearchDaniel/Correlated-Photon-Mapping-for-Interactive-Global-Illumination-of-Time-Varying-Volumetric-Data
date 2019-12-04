@@ -36,6 +36,8 @@
 #include <inviwo/core/common/inviwo.h>
 #include <inviwo/core/processors/processor.h>
 #include <inviwo/core/ports/bufferport.h>
+#include <inviwo/core/properties/ordinalproperty.h>
+#include <inviwo/core/properties/boolproperty.h>
 #include <modules/opencl/inviwoopencl.h>
 #include <modules/importancesamplingcl/uniformsamplegenerator2dcl.h>
 
@@ -43,9 +45,9 @@
 
 
 namespace inviwo {
-
+    
 class IVW_MODULE_IMPORTANCESAMPLINGCL_API UniformSampleGenerator2DProcessorCL : public Processor, public ProcessorKernelOwner {
-
+    
 public:
     UniformSampleGenerator2DProcessorCL();
     ~UniformSampleGenerator2DProcessorCL() = default;
@@ -53,26 +55,20 @@ public:
     virtual const ProcessorInfo getProcessorInfo() const override;
     static const ProcessorInfo processorInfo_;
     virtual void process() override;
-
-    virtual bool isReady() const override {
-        return samplesPort_.isConnected() && allInportsAreReady();
-    }
-
-
-private:
+    private:
     SampleOutport samplesPort_; ///< Generated sample xy locations between [0 1]
     SampleOutport directionalSamplesPort_; ///< Generated directional sample xy locations between [0 1]
     SampleGenerator2DCLOutport sampleGeneratorPort_;
-
+    
     IntVec2Property nSamples_;
-	IntVec2Property workGroupSize_;
+    IntVec2Property workGroupSize_;
     BoolProperty useGLSharing_;
-
+    
     std::shared_ptr< SampleBuffer > samples_; //< uv-coordinates, unsued, pdf=1
     std::shared_ptr< SampleBuffer > directionalSamples_; //< uv-coordinates, unsued, pdf=1
     UniformSampleGenerator2DCL sampleGenerator_;
 };
-
+    
 }
 
 #endif // IVW_UNIFORM_SAMPLE_GENERATOR_2D_CL_H

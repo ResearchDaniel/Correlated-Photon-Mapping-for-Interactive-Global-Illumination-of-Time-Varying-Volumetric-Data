@@ -63,12 +63,75 @@ UniformGridCLModule::UniformGridCLModule(InviwoApplication* app) : InviwoModule(
     registerDataWriter(util::make_unique<UniformGrid3DWriter>());
     
 
-    registerPort<UniformGrid3DInport>("org.inviwo.UniformGrid3DInport");
-    registerPort<UniformGrid3DOutport>("org.inviwo.UniformGrid3DOutport");
+    registerPort<UniformGrid3DInport>();
+    registerPort<UniformGrid3DOutport>();
 
     // Add a directory to the search path of the KernelManager
     OpenCL::getPtr()->addCommonIncludeDirectory(getPath(ModulePath::CL));
     uniformgridcl::addShaderResources(ShaderManager::getPtr(), { getPath(ModulePath::GLSL) });
 }
+    
+int UniformGridCLModule::getVersion() const { return 1; }
 
+std::unique_ptr<VersionConverter> UniformGridCLModule::getConverter(int version) const {
+    return util::make_unique<Converter>(version);
+}
+
+UniformGridCLModule::Converter::Converter(int version) : version_(version) {}
+
+bool UniformGridCLModule::Converter::convert(TxElement* root) {
+    auto makerules = []() {
+        std::vector<xml::IdentifierReplacement> repl = {
+            // DynamicVolumeDifferenceAnalysis
+            { { xml::Kind::processor("com.inviwo.DynamicVolumeDifferenceAnalysis"),
+                xml::Kind::outport("UniformGrid3DBaseSharedPtrVectorOutport") },
+                "dynamic data info",
+                "DynamicDataInfo" },
+            
+            // UniformGrid3DExport
+            { { xml::Kind::processor("org.inviwo.UniformGrid3DExport"),
+                xml::Kind::inport("UniformGrid3DBaseSharedPtrVectorInport") },
+                "Uniform grids",
+                "UniformGrids" },
+            
+            // UniformGrid3DPlayerProcessor
+            { { xml::Kind::processor("org.inviwo.UniformGrid3DPlayerProcessor"),
+                xml::Kind::outport("UniformGrid3DBaseOutport") },
+                "Interpolated data",
+                "InterpolatedData" },
+            
+            // VolumeMinMaxCLProcessor
+            { { xml::Kind::processor("com.inviwo.VolumeMinMaxCLProcessor"),
+                xml::Kind::inport("org.inviwo.VolumeSharedPtrVectorInport") },
+                "vector volume",
+                "VolumeSequenceInput" },
+            { { xml::Kind::processor("com.inviwo.VolumeMinMaxCLProcessor"),
+                xml::Kind::outport("UniformGrid3DBaseSharedPtrVectorOutport") },
+                "vector output",
+                "UniformGrid3DVectorOut" },
+            
+            // VolumeSequencePlayer
+            { { xml::Kind::processor("org.inviwo.VolumeSequencePlayer"),
+                xml::Kind::outport("org.inviwo.VolumeOutport") },
+                "interpolated volume",
+                "InterpolatedVolume" }
+            
+            
+        };
+        return repl;
+    };
+    
+    bool res = false;
+    switch (version_) {
+        case 0: {
+            auto repl = makerules();
+            res |= xml::changeIdentifiers(root, repl);
+        }
+        return res;
+        
+        default:
+        return false;  // No changes
+    }
+    return true;
+}
 } // namespace

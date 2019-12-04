@@ -31,6 +31,7 @@
  *********************************************************************************/
 
 #include "lightsourcescl.h"
+#include <inviwo/core/ports/dataoutport.h>
 
 namespace inviwo {
 

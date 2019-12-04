@@ -28,92 +28,93 @@
  *********************************************************************************/
 
 #include "uniformgrid3dwriter.h"
+#include <inviwo/core/io/datawriterexception.h>
 
 namespace inviwo {
+    
+UniformGrid3DWriter::UniformGrid3DWriter()
+//: DataWriterType<UniformGrid3DVector>() {
+: DataWriter() {
+    addExtension(FileExtension("u3d", "Uniform grid 3D"));
+}
 
+UniformGrid3DWriter::UniformGrid3DWriter(const UniformGrid3DWriter& rhs)
+//: DataWriterType<UniformGrid3DVector>(rhs) {}
+: DataWriter(rhs) {}
 
+UniformGrid3DWriter* UniformGrid3DWriter::clone() const { return new UniformGrid3DWriter(*this); }
 
 UniformGrid3DWriter& UniformGrid3DWriter::operator=(const UniformGrid3DWriter& that) {
-    if (this != &that)
-        DataWriterType< UniformGrid3DVector >::operator=(that);
-
+    //if (this != &that) DataWriterType<UniformGrid3DVector>::operator=(that);
+    if (this != &that) DataWriter::operator=(that);
+    
     return *this;
 }
 
-void UniformGrid3DWriter::writeData(const UniformGrid3DVector* vectorData, const std::string filePath) const {
+void UniformGrid3DWriter::writeData(const UniformGrid3DVector* vectorData,
+                                    const std::string filePath) const {
     if (vectorData->size() < 1) {
         throw DataWriterException("Error: Cannot write empty vector", IvwContext);
     }
     std::string rawPath = filesystem::replaceFileExtension(filePath, "raw");
-
+    
     if (filesystem::fileExists(filePath) && !overwrite_)
-        throw DataWriterException("Error: Output file: " + filePath + " already exists", IvwContext);
-
+    throw DataWriterException("Error: Output file: " + filePath + " already exists",
+                              IvwContext);
+    
     if (filesystem::fileExists(rawPath) && !overwrite_)
-        throw DataWriterException("Error: Output file: " + rawPath + " already exists", IvwContext);
-
+    throw DataWriterException("Error: Output file: " + rawPath + " already exists", IvwContext);
+    
     std::string fileDirectory = filesystem::getFileDirectory(filePath);
     std::string fileExtension = filesystem::getFileExtension(filePath);
     std::string fileName = filesystem::getFileNameWithoutExtension(filePath);
-
+    
     auto data = vectorData->front().get();
-    //Write the header file content
+    // Write the header file content
     std::stringstream ss;
     auto modelMatrix = glm::transpose(data->getModelMatrix());
     auto worldMatrix = glm::transpose(data->getWorldMatrix());
     auto structuredGridDim = data->getDimensions();
     auto cellDim = data->getCellDimension();
-
+    
     writeKeyToString(ss, "RawFile", fileName + ".raw");
     writeKeyToString(ss, "Resolution", size4_t(data->getDimensions(), vectorData->size()));
     writeKeyToString(ss, "Format", data->getDataFormat()->getString());
     writeKeyToString(ss, "ModelMatrix", modelMatrix);
     writeKeyToString(ss, "WorldMatrix", worldMatrix);
     writeKeyToString(ss, "CellDimensions", cellDim);
-
+    
     std::ofstream f(filePath.c_str());
-
+    
     if (f.good())
-        f << ss.str();
+    f << ss.str();
     else
-        throw DataWriterException("Error: Could not write to file: " + filePath, IvwContext);
+    throw DataWriterException("Error: Could not write to file: " + filePath, IvwContext);
     f.close();
-    //std::fstream fout(filePath.c_str(), std::ios::out | std::ios::binary | std::ios::app);
-
-    //if (fout.good()) {
+    // std::fstream fout(filePath.c_str(), std::ios::out | std::ios::binary | std::ios::app);
+    
+    // if (fout.good()) {
     //    for (auto element : *vectorData) {
     //        fout.write((char*)element->getData(), element->getSizeInBytes());
     //    }
-
+    
     //} else
     //    throw DataWriterException("Error: Could not write to raw file: " + filePath, IvwContext);
-
-    //fout.close();
+    
+    // fout.close();
     
     std::fstream fout(rawPath.c_str(), std::ios::out | std::ios::binary);
-
+    
     if (fout.good()) {
         for (auto element : *vectorData) {
             fout.write((char*)element->getData(), element->getSizeInBytes());
         }
-
+        
     } else
-        throw DataWriterException("Error: Could not write to raw file: " + rawPath, IvwContext);
-
+    throw DataWriterException("Error: Could not write to raw file: " + rawPath, IvwContext);
+    
     fout.close();
 }
 
-UniformGrid3DWriter::UniformGrid3DWriter() {
-    addExtension(FileExtension("u3d", "Uniform grid 3D"));
-}
-
-UniformGrid3DWriter::UniformGrid3DWriter(const UniformGrid3DWriter& rhs) : DataWriterType< UniformGrid3DVector >(rhs) {
-
-}
-
-UniformGrid3DWriter* UniformGrid3DWriter::clone() const {
-    return new UniformGrid3DWriter(*this);
-}
-
-} // namespace
+}  // namespace inviwo
 

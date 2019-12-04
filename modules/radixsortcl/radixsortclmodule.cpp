@@ -2,7 +2,7 @@
  *
  * Inviwo - Interactive Visualization Workshop
  *
- * Copyright (c) 2014-2016 Inviwo Foundation
+ * Copyright (c) 2014-2019 Inviwo Foundation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,14 +28,24 @@
  *********************************************************************************/
 
 #include "radixsortcl/radixsortclmodule.h"
-#include "src/clhpp11.h"
-#include "radixsortcl/processors/radixsortcl.h"
+#include "clogs/src/clhpp11.h"
+#include <modules/radixsortcl/processors/radixsortcl.h>
 
 #include <inviwo/core/io/textfilereader.h>
-#include <opencl/inviwoopencl.h>
+#include <inviwo/core/util/filesystem.h>
+#include <modules/opencl/inviwoopencl.h>
 #include <warn/push>
-#include <warn/ignore/conversion>
-#include "src/utils.h"
+#if defined(__clang__)
+ //  Not available
+#elif defined(__GNUC__)
+ //  Not available
+#elif defined(_MSC_VER)
+#   if (_MSC_FULL_VER >= 130000000)
+        // Return conversion from size_t to cl_uint, possible loss of data
+#       pragma warning(disable: 4267)
+#   endif
+#endif
+#include <clogs/src/utils.h>
 #include <warn/pop>
 
 namespace inviwo {
@@ -43,7 +53,7 @@ namespace inviwo {
 RadixSortCLModule::RadixSortCLModule(InviwoApplication* app) : InviwoModule(app, "RadixSortCL") {
     registerProcessor<RadixSortCL>();
 
-    OpenCL::getPtr()->addCommonIncludeDirectory(getPath() + "/kernels");
+    OpenCL::getPtr()->addCommonIncludeDirectory(getPath() + "/ext/clogs/kernels");
     for (const auto& elem : OpenCL::getPtr()->getCommonIncludeDirectories()) {
         std::string pathToKernels = elem;
         try {

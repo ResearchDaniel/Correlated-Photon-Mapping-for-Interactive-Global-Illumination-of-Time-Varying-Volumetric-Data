@@ -79,5 +79,50 @@ ImportanceSamplingCLModule::ImportanceSamplingCLModule(InviwoApplication* app) :
     // registerResource(Resource* resource);    
     OpenCL::getPtr()->addCommonIncludeDirectory(getPath(ModulePath::CL));
 }
+    
+int ImportanceSamplingCLModule::getVersion() const { return 1; }
+
+std::unique_ptr<VersionConverter> ImportanceSamplingCLModule::getConverter(int version) const {
+    return util::make_unique<Converter>(version);
+}
+
+ImportanceSamplingCLModule::Converter::Converter(int version) : version_(version) {}
+
+bool ImportanceSamplingCLModule::Converter::convert(TxElement* root) {
+    auto makerules = []() {
+        std::vector<xml::IdentifierReplacement> repl = {
+            
+            // ProgressivePhotonTracerCL
+            { { xml::Kind::processor("com.inviwo.ProgressivePhotonTracerCL"),
+                xml::Kind::inport("LightSamplesMultiInport") },
+                "Light samples",
+                "LightSamples" },
+            
+            // UniformSampleGenerator2DCL
+            { { xml::Kind::processor("com.inviwo.UniformSampleGenerator2DCL"),
+                xml::Kind::outport("org.inviwo.BufferOutport") },
+                "Directional samples",
+                "UniformGrid3D" },
+            { { xml::Kind::processor("com.inviwo.UniformSampleGenerator2DCL"),
+                xml::Kind::outport("SampleGenerator2DCL") },
+                "Sample generator",
+                "SampleGenerator" }
+        };
+        return repl;
+    };
+    
+    bool res = false;
+    switch (version_) {
+        case 0: {
+            auto repl = makerules();
+            res |= xml::changeIdentifiers(root, repl);
+        }
+        return res;
+        
+        default:
+        return false;  // No changes
+    }
+    return true;
+}
 
 } // namespace

@@ -1,0 +1,75 @@
+1.5.0
+-----
+* Make tuning work on-the-fly instead of requiring up-front tuning
+* Make the ABI robust against changes to OpenCL C++ bindings
+* Add method overloads that take OpenCL C API handles
+* Add free callback to setEventCallback functions
+* Add support for arbitrary function objects to setEventCallback functions
+* Allow algorithm objects to be default constructed, swapped, and moved
+* Fix CLOGS_VERSION_MINOR
+
+1.4.0
+-----
+* Reduction has been added
+* Introduced the ScanProblem and RadixsortProblem classes
+* The cache is now stored in a SQLite database instead of lots of files
+* The cache is now located in an XDG-compliant location on UNIX (~/.cache/clogs by default).
+* The tuning caching mechanism has been significantly rewritten for use with SQLite
+* All kernels generated during tuning are now cached (this can use a lot of space)
+
+1.3.0
+-----
+* Program binaries are now extracted during tuning and saved in the cache (see #8). This can also make tuning faster on systems that don't cache kernels.
+* Out-of-place scan is now supported (partially implements #12).
+* Workaround to avoid depending on OpenCL 1.2 ICD
+
+1.2.4
+-----
+* Fix definition of WARP_VOLATILE (#28)
+
+1.2.3
+-----
+* Fix a bug causing incorrect results when SCAN_BLOCKS is small (#26)
+* Avoid building the unit test kernels except when testing (#24)
+* Speed up tuning on CPU devices (#25)
+
+1.2.2
+-----
+* Fix a race condition in radix sort (mostly affects CPU devices)
+* Work around an AMD driver bug that caused segfaults in tuning
+* Avoid passing defines with both -D and #define
+
+1.2.1
+-----
+* Performance improvements, particularly for AMD GPUs
+* Added --keep-going option to clogs-tune, as a temporary work-around for #23
+
+1.2.0
+-----
+* Kernel parameters are now autotuned (refer to user manual)
+* Added benchmark support for scan
+* Fixed sorting in benchmark tool to support 3-element value types
+* Improved robustness to non-default locale
+* Added --split-debug and --variant=symbols configuration options
+
+1.1.0
+-----
+* Add setEventCallback methods to Scan and Radixsort
+* Worked around a bug in the Intel OpenCL compiler
+
+1.0.3
+-----
+* Some minor tweaks to allow building on Windows with MSVC
+* Allow build to complete (without tests) if CppUnit is missing
+
+1.0.2
+-----
+* Fix a build system error that caused builds to fail when documentation was built from a pristine installation
+
+1.0.1
+-----
+* Fix a packaging error that prevented installation from working when building docs
+
+1.0.0
+-----
+* First public release

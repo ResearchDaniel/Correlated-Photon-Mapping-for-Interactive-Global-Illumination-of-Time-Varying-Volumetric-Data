@@ -2,7 +2,7 @@
  *
  * Inviwo - Interactive Visualization Workshop
  *
- * Copyright (c) 2014-2016 Inviwo Foundation
+ * Copyright (c) 2014-2019 Inviwo Foundation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,14 +27,7 @@
  * 
  *********************************************************************************/
 
-//#include "../src/tune.h"
-#include "radixsortcl.h"
-#include <warn/push>
-#include <warn/ignore/conversion>
-#include <warn/ignore/dll-interface-base>
-#include <warn/ignore/unused-variable>
-
-#include <warn/pop>
+#include <modules/radixsortcl/processors/radixsortcl.h>
 #include <inviwo/core/datastructures/buffer/bufferramprecision.h>
 #include <modules/opencl/buffer/buffercl.h>
 #include <modules/opencl/syncclgl.h>

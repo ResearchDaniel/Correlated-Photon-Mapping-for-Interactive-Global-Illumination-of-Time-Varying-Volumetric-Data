@@ -35,6 +35,7 @@
 #include <inviwo/core/processors/processor.h>
 #include <inviwo/core/datastructures/buffer/bufferram.h>
 #include <inviwo/core/datastructures/buffer/bufferramprecision.h>
+#include <inviwo/core/datastructures/volume/volumeramprecision.h>
 #include <modules/base/properties/sequencetimerproperty.h>
 #include <inviwo/core/ports/volumeport.h>
 #include <modules/uniformgridcl/uniformgrid3d.h>

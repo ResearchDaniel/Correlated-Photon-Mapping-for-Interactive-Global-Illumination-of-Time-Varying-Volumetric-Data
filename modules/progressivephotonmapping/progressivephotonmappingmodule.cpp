@@ -46,8 +46,8 @@ ProgressivePhotonMappingModule::ProgressivePhotonMappingModule(InviwoApplication
     registerProcessor<ProgressivePhotonTracerCL>();
     OpenCL::getPtr()->addCommonIncludeDirectory(getPath(ModulePath::CL));
 
-    registerPort< DataInport<PhotonData> >("PhotonDataInport");
-    registerPort< DataOutport<PhotonData> >("PhotonDataOutport");
+    registerPort<DataInport<PhotonData>>();
+    registerPort<DataOutport<PhotonData>>();
 }
 
 } // namespace

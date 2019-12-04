@@ -40,13 +40,17 @@
 #include <inviwo/core/datastructures/buffer/buffer.h>
 #include <inviwo/core/datastructures/light/directionallight.h>
 #include <inviwo/core/ports/imageport.h>
+#include <inviwo/core/ports/meshport.h>
 #include <inviwo/core/ports/volumeport.h>
 #include <inviwo/core/processors/processor.h>
 #include <inviwo/core/properties/advancedmaterialproperty.h>
+#include <inviwo/core/properties/boolproperty.h>
+#include <inviwo/core/properties/buttonproperty.h>
 #include <inviwo/core/properties/cameraproperty.h>
 #include <inviwo/core/properties/minmaxproperty.h>
 #include <inviwo/core/properties/stringproperty.h>
 #include <inviwo/core/properties/transferfunctionproperty.h>
+#include <inviwo/core/util/timer.h>
 #include <modules/opengl/shader/shader.h>
 #include <modules/opengl/image/imagegl.h>
 
@@ -77,7 +81,7 @@ namespace inviwo {
  * ### Outports
  *   * __photons__ Traced photons.
  *   * __recomputedIndices__ List of indices to recomputed photons if importance grid is used.
- * 
+ *
  * ### Properties
  *   * __<Prop1>__ <description>.
  *   * __<Prop2>__ <description>
@@ -87,7 +91,7 @@ namespace inviwo {
 /**
  * \class ProgressivePhotonTracerCL
  *
- * \brief <brief description> 
+ * \brief <brief description>
  *
  * <Detailed description from a developer prespective>
  */
@@ -95,33 +99,33 @@ class IVW_MODULE_PROGRESSIVEPHOTONMAPPING_API ProgressivePhotonTracerCL : public
 public:
     ProgressivePhotonTracerCL();
     ~ProgressivePhotonTracerCL() = default;
-
+    
     virtual const ProcessorInfo getProcessorInfo() const override;
     static const ProcessorInfo processorInfo_;
-
-    virtual void process() override;
-
     
-
+    virtual void process() override;
+    
+    
+    
     virtual void onKernelCompiled(const cl::Kernel* kernel) override;
-
+    
 protected:
-
+    
     void kernelArgChanged();
     void onTimerEvent();
-
+    
     float getSceneRadius() const;
-
+    
     void invalidateProgressiveRendering(PhotonData::InvalidationReason invalidationFlag);
     // Invalidate without resetting iterations
     void evaluateProgressiveRefinement();
     void phaseFunctionChanged();
-
+    
     void onClipChange();
-
+    
     void progressiveRefinementChanged();
     void noSingleScatteringChanged();
-
+    
     void sortIndicesByImportance(const BufferBase* keys, BufferCLBase* keysCL, const BufferBase* data, const BufferCLBase* dataCL, const VECTOR_CLASS<cl::Event> *waitForEvents, cl::Event *event = nullptr);
     void sortIndices(const BufferBase* keys, BufferCLBase* keysCL, const BufferBase* values, BufferCLBase* valuesCL, size_t nElements, const VECTOR_CLASS<cl::Event> *waitForEvents, cl::Event *event = nullptr);
     int reduceInts(const BufferCLBase* dataCL, size_t nElements, bool blocking, const VECTOR_CLASS<cl::Event> *waitForEvents, cl::Event *readBackEvent = nullptr, cl::Event *reduceEvent = nullptr);
@@ -133,53 +137,53 @@ protected:
     std::unique_ptr<clogs::Radixsort> recomputationIndexSorter_;
     size_t sortIndicesTempBufferSize_ = 0;
     std::unique_ptr<clogs::Reduce> reduce_;
-private:
+    private:
     VolumeInport volumePort_;
     UniformGrid3DInport recomputationImportanceGrid_;
     MultiDataInport<LightSamples> lightSamples_;
-
+    
     DataOutport<PhotonData> outport_;
     DataOutport<RecomputedPhotonIndices> recomputedIndicesPort_;
-
+    
     FloatProperty samplingRate_;
     FloatProperty radius_;
     FloatProperty sceneRadianceScaling_;
     FloatProperty alphaProp_;
-
+    
     IntProperty maxScatteringEvents_;
     BoolProperty noSingleScattering_;
     // Material properties
     TransferFunctionProperty transferFunction_;
     AdvancedMaterialProperty advancedMaterial_;
-
+    
     IntVec2Property workGroupSize_;
     BoolProperty useGLSharing_;
-
+    
     CameraProperty camera_;
-
+    
     FloatProperty maxIncrementalPhotonsToUpdate_; // Percentage of photons to update when TF/time-volume changes
     BoolProperty equalIncrementalImportance_; // All photons to update receive equal importance.
-    int remainingPhotonsOffset_ = 0;
+    size_t remainingPhotonsOffset_ = 0;
     int remainingPhotonsToUpdate_ = -1;
     BoolProperty spatialSorting_;
-    // Enables step by step invalidation and 
+    // Enables step by step invalidation and
     // other processors to react on an invalidation
     // from this processor
     ButtonProperty invalidateRendering_;
     BoolProperty enableProgressiveRefinement_;
     BoolProperty enableProgressivePhotonRecomputation_;
-
+    
     IntMinMaxProperty clipX_;
     IntMinMaxProperty clipY_;
     IntMinMaxProperty clipZ_;
-
+    
     std::shared_ptr<PhotonData> photonData_;
     PhotonData::InvalidationReason invalidationFlag_ = PhotonData::InvalidationReason::All;
-
+    
     BufferCL axisAlignedBoundingBoxCL_;
-
+    
     PhotonTracerCL photonTracer_;
-
+    
     PhotonRecomputationDetector photonRecomputationDetector_;
     Buffer<unsigned int> photonRecomputationImportance_; // Must be unsigned integer type for sorting to work (radix sort)
     Buffer<unsigned int> photonRecomputationHashed_; // Must be unsigned integer type for sorting to work

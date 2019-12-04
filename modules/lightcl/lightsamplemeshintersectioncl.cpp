@@ -33,16 +33,14 @@
 #include "lightsamplemeshintersectioncl.h"
 #include <modules/opencl/buffer/buffercl.h>
 #include <modules/opencl/buffer/bufferclgl.h>
-#include <modules/opencl/buffer/elementbuffercl.h>
-#include <modules/opencl/buffer/elementbufferclgl.h>
 #include <modules/opencl/syncclgl.h>
 
 
 namespace inviwo {
-
-
+    
+    
 LightSampleMeshIntersectionCL::LightSampleMeshIntersectionCL(size_t workGroupSize /*= 128*/, bool useGLSharing /*= true*/)
-: workGroupSize_(workGroupSize), useGLSharing_(useGLSharing) {
+: useGLSharing_(useGLSharing), workGroupSize_(workGroupSize) {
     intersectionKernel_ = addKernel("intersection/lightsamplemeshintersection.cl", "lightSampleMeshIntersectionKernel");
 }
 
@@ -62,7 +60,7 @@ void LightSampleMeshIntersectionCL::meshSampleIntersection(const Mesh* mesh, Lig
             SyncCLGL glSync;
             auto lightSamplesCL = samples->getLightSamples()->getEditableRepresentation<BufferCLGL>();
             auto verticesCL = mesh->getBuffer(0)->getRepresentation<BufferCLGL>();
-            auto indicesCL = mesh->getIndicies(0)->getRepresentation<ElementBufferCLGL>();
+            auto indicesCL = mesh->getIndexBuffers().front().second->getRepresentation<BufferCLGL>();
             auto intersectionPointsCL = samples->getIntersectionPoints()->getEditableRepresentation<BufferCLGL>();
             // Acquire shared representations before using them in OpenGL
             // The SyncCLGL object will take care of synchronization between OpenGL and OpenCL
@@ -71,16 +69,16 @@ void LightSampleMeshIntersectionCL::meshSampleIntersection(const Mesh* mesh, Lig
             glSync.addToAquireGLObjectList(indicesCL);
             glSync.addToAquireGLObjectList(intersectionPointsCL);
             glSync.aquireAllObjects();
-
+            
             meshSampleIntersection(verticesCL, indicesCL, indicesCL->getSize(), samples->getSize(), lightSamplesCL, intersectionPointsCL, nullptr, intersectionEvent);
         } else {
             auto lightSamplesCL = samples->getLightSamples()->getEditableRepresentation<BufferCL>();
             auto verticesCL = mesh->getBuffer(0)->getRepresentation<BufferCL>();
-            auto indicesCL = mesh->getIndicies(0)->getRepresentation<ElementBufferCL>();
+            auto indicesCL = mesh->getIndexBuffers().front().second->getRepresentation<BufferCLGL>();
             auto intersectionPointsCL = samples->getIntersectionPoints()->getEditableRepresentation<BufferCL>();
             meshSampleIntersection(verticesCL, indicesCL, indicesCL->getSize(), samples->getSize(), lightSamplesCL, intersectionPointsCL, nullptr, intersectionEvent);
         }
-
+        
     } catch (cl::Error& err) {
         LogError(getCLErrorString(err));
     };
@@ -94,9 +92,9 @@ void LightSampleMeshIntersectionCL::meshSampleIntersection(const BufferCLBase* v
     intersectionKernel_->setArg(argIndex++, *lightSamplesCL);
     intersectionKernel_->setArg(argIndex++, static_cast<int>(nSamples));
     intersectionKernel_->setArg(argIndex++, *intersectionPointsCL);
-
+    
     size_t globalWorkSizeX = getGlobalWorkGroupSize(nSamples, workGroupSize_);
-
+    
     OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(*intersectionKernel_, cl::NullRange, globalWorkSizeX, workGroupSize_, NULL, event);
 }
 

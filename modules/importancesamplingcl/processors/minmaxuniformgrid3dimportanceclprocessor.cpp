@@ -34,16 +34,16 @@
 #include <inviwo/core/util/colorconversion.h>
 #include <modules/opencl/buffer/buffercl.h>
 #include <modules/opencl/syncclgl.h>
-#include <glm/gtx/epsilon.hpp>
+#include <glm/gtc/epsilon.hpp>
 #define IVW_DETAILED_PROFILING
 namespace inviwo {
-
+    
 // The Class Identifier has to be globally unique. Use a reverse DNS naming
 // scheme
 const ProcessorInfo MinMaxUniformGrid3DImportanceCLProcessor::processorInfo_{
     "org.inviwo.MinMaxUniformGrid3DImportanceCLProcessor",  // Class identifier
     "MinMaxUniformGrid3DImportance",                          // Display name
-    "UniformGrid",                                            // Category
+    "UniformGrid3D",                                            // Category
     CodeState::Experimental,                                  // Code state
     Tags::CL,                                                 // Tags
 };
@@ -52,28 +52,30 @@ const ProcessorInfo MinMaxUniformGrid3DImportanceCLProcessor::getProcessorInfo()
 }
 
 MinMaxUniformGrid3DImportanceCLProcessor::MinMaxUniformGrid3DImportanceCLProcessor()
-    : Processor()
-    , ProcessorKernelOwner(this)
-    , minMaxUniformGrid3DInport_("minMaxUniformGrid3D")
-    , volumeDifferenceInfoInport_("volumeDifferenceInfo")
-    , importanceUniformGrid3DOutport_("importanceUniformGrid3D")
-    , opacityWeight_("constantWeight", "Opacity weight", 1.f, 0.f, 1.f)
-    , opacityDiffWeight_("opacityDiffWeight", "Opacity difference weight", 0.f, 0.f, 1.f)
-    , colorWeight_("colorWeight", "Color weight", 0.f, 0.f, 1.f)
-    , colorDiffWeight_("colorDiffWeight", "Color difference weight", 0.f, 0.f, 1.f)
-    , useAssociatedColor_("useAssociatedColor", "Associated color", false)
-    , TFPointEpsilon_("TFPointEpsilon", "Minimum change threshold", 1e-4f, 0.f, 1e-2f, 1e-3f)
-    , transferFunction_("transferfunction", "Transfer function")
-    , workGroupSize_("wgsize", "Work group size", 128, 1, 4096)
-    , useGLSharing_("glsharing", "Use OpenGL sharing", true)
-    , importanceUniformGrid3D_(std::make_shared<ImportanceUniformGrid3D>()) {
+: Processor()
+, ProcessorKernelOwner(this)
+, incrementalImportance("incrementalImportance", "Incremental importance", true)
+, minMaxUniformGrid3DInport_("minMaxUniformGrid3D")
+, volumeDifferenceInfoInport_("volumeDifferenceInfo")
+, importanceUniformGrid3DOutport_("importanceUniformGrid3D")
+, opacityWeight_("constantWeight", "Opacity weight", 1.f, 0.f, 1.f)
+, opacityDiffWeight_("opacityDiffWeight", "Opacity difference weight", 0.f, 0.f, 1.f)
+, colorWeight_("colorWeight", "Color weight", 0.f, 0.f, 1.f)
+, colorDiffWeight_("colorDiffWeight", "Color difference weight", 0.f, 0.f, 1.f)
+, useAssociatedColor_("useAssociatedColor", "Associated color", false)
+, TFPointEpsilon_("TFPointEpsilon", "Minimum change threshold", 1e-4f, 0.f, 1e-2f, 1e-3f)
+, transferFunction_("transferfunction", "Transfer function")
+, workGroupSize_("wgsize", "Work group size", 128, 1, 4096)
+, useGLSharing_("glsharing", "Use OpenGL sharing", true)
+, importanceUniformGrid3D_(std::make_shared<ImportanceUniformGrid3D>()) {
     addPort(minMaxUniformGrid3DInport_);
     minMaxUniformGrid3DInport_.onChange(
-        [this]() { setInvalidationReason(InvalidationReason::Volume); });
+                                        [this]() { setInvalidationReason(InvalidationReason::Volume); });
     volumeDifferenceInfoInport_.setOptional(true);
     addPort(volumeDifferenceInfoInport_);
     addPort(importanceUniformGrid3DOutport_);
-
+    
+    addProperty(incrementalImportance);
     addProperty(opacityWeight_);
     addProperty(opacityDiffWeight_);
     addProperty(colorWeight_);
@@ -87,22 +89,22 @@ MinMaxUniformGrid3DImportanceCLProcessor::MinMaxUniformGrid3DImportanceCLProcess
     // colorDiffWeight_.onChange([this](){
     // setInvalidationReason(InvalidationReason::TransferFunction); });
     useAssociatedColor_.onChange(
-        [this]() { setInvalidationReason(InvalidationReason::TransferFunction); });
-
+                                 [this]() { setInvalidationReason(InvalidationReason::TransferFunction); });
+    
     addProperty(transferFunction_);
     transferFunction_.onChange(
-        [this]() { setInvalidationReason(InvalidationReason::TransferFunction); });
+                               [this]() { setInvalidationReason(InvalidationReason::TransferFunction); });
     addProperty(workGroupSize_);
     addProperty(useGLSharing_);
     kernel_ =
-        addKernel("minmaxuniformgrid3dimportance.cl", "classifyMinMaxUniformGrid3DImportanceKernel",
-                  "", " -D INCREMENTAL_TF_IMPORTANCE");
+    addKernel("minmaxuniformgrid3dimportance.cl", "classifyMinMaxUniformGrid3DImportanceKernel",
+              "", " -D INCREMENTAL_TF_IMPORTANCE");
     timeVaryingKernel_ = addKernel("minmaxuniformgrid3dimportance.cl",
                                    "classifyTimeVaryingMinMaxUniformGrid3DImportanceKernel");
-
+    
     importanceUniformGrid3DOutport_.setData(importanceUniformGrid3D_);
     // Count as unused if cleared
-    prevTransferFunction_.clearPoints();
+    prevTransferFunction_.clear();
 }
 
 void MinMaxUniformGrid3DImportanceCLProcessor::process() {
@@ -110,7 +112,7 @@ void MinMaxUniformGrid3DImportanceCLProcessor::process() {
         return;
     }
     const MinMaxUniformGrid3D *minMaxUniformGrid3D =
-        dynamic_cast<const MinMaxUniformGrid3D *>(minMaxUniformGrid3DInport_.getData().get());
+    dynamic_cast<const MinMaxUniformGrid3D *>(minMaxUniformGrid3DInport_.getData().get());
     if (!minMaxUniformGrid3D) {
         LogError("minMaxUniformGrid3DInport_ expects MinMaxUniformGrid3D as input");
         return;
@@ -124,7 +126,7 @@ void MinMaxUniformGrid3DImportanceCLProcessor::process() {
     }
     if (static_cast<int>(invalidationFlag_) &
         static_cast<int>(InvalidationReason::TransferFunction)) {
-        if (prevTransferFunction_.getNumPoints() == 0) {
+        if (prevTransferFunction_.size() == 0 || !incrementalImportance) {
             updateTransferFunctionData();
         } else {
             updateTransferFunctionDifferenceData();
@@ -135,7 +137,7 @@ void MinMaxUniformGrid3DImportanceCLProcessor::process() {
     }
     size3_t dim = importanceUniformGrid3D_->getDimensions();
     size_t nElements = dim.x * dim.y * dim.z;
-
+    
     size_t localWorkGroupSize(workGroupSize_.get());
     size_t globalWorkGroupSize(getGlobalWorkGroupSize(nElements, localWorkGroupSize));
 #ifdef IVW_DETAILED_PROFILING
@@ -143,55 +145,57 @@ void MinMaxUniformGrid3DImportanceCLProcessor::process() {
 #else
     cl::Event *profilingEvent = nullptr;
 #endif
-
+    
     if (volumeDifferenceInfoInport_.isReady() && prevMinMaxUniformGrid3D_ != nullptr &&
         prevMinMaxUniformGrid3D_.get() != minMaxUniformGrid3D) {
         // Time varying data changed
         auto volumeDifferenceData = dynamic_cast<const DynamicVolumeInfoUniformGrid3D *>(
-            volumeDifferenceInfoInport_.getData().get());
+                                                                                         volumeDifferenceInfoInport_.getData().get());
         if (!volumeDifferenceData) {
             LogError(
-                "volumeDifferenceInfoInport_ expects "
-                "DynamicVolumeInfoUniformGrid3D as input");
+                     "volumeDifferenceInfoInport_ expects "
+                     "DynamicVolumeInfoUniformGrid3D as input");
             return;
         }
         if (useGLSharing_) {
             SyncCLGL glSync;
             auto minMaxUniformGrid3DCL = minMaxUniformGrid3D->data.getRepresentation<BufferCLGL>();
-            auto prevMinMaxUniformGrid3DCL = prevMinMaxUniformGrid3D_->data.getRepresentation<BufferCLGL>();
+            auto prevMinMaxUniformGrid3DCL =
+            prevMinMaxUniformGrid3D_->data.getRepresentation<BufferCLGL>();
             auto volumeDifferenceInfoCL =
-                volumeDifferenceData->data.getRepresentation<BufferCLGL>();
-
+            volumeDifferenceData->data.getRepresentation<BufferCLGL>();
+            
             auto importanceUniformGrid3DCL =
-                importanceUniformGrid3D_->data.getEditableRepresentation<BufferCLGL>();
+            importanceUniformGrid3D_->data.getEditableRepresentation<BufferCLGL>();
             glSync.addToAquireGLObjectList(minMaxUniformGrid3DCL);
             glSync.addToAquireGLObjectList(prevMinMaxUniformGrid3DCL);
             glSync.addToAquireGLObjectList(volumeDifferenceInfoCL);
             glSync.addToAquireGLObjectList(importanceUniformGrid3DCL);
-
+            
             glSync.aquireAllObjects();
-            computeImportance(minMaxUniformGrid3DCL, prevMinMaxUniformGrid3DCL, volumeDifferenceInfoCL, nElements,
-                              importanceUniformGrid3DCL, globalWorkGroupSize, localWorkGroupSize,
-                              profilingEvent);
+            computeImportance(minMaxUniformGrid3DCL, prevMinMaxUniformGrid3DCL,
+                              volumeDifferenceInfoCL, nElements, importanceUniformGrid3DCL,
+                              globalWorkGroupSize, localWorkGroupSize, profilingEvent);
         } else {
             auto minMaxUniformGrid3DCL = minMaxUniformGrid3D->data.getRepresentation<BufferCL>();
             auto volumeDifferenceInfoCL = volumeDifferenceData->data.getRepresentation<BufferCL>();
-            auto prevMinMaxUniformGrid3DCL = prevMinMaxUniformGrid3D_->data.getRepresentation<BufferCL>();
+            auto prevMinMaxUniformGrid3DCL =
+            prevMinMaxUniformGrid3D_->data.getRepresentation<BufferCL>();
             auto importanceUniformGrid3DCL =
-                importanceUniformGrid3D_->data.getEditableRepresentation<BufferCL>();
-            computeImportance(minMaxUniformGrid3DCL, prevMinMaxUniformGrid3DCL , volumeDifferenceInfoCL, nElements,
-                              importanceUniformGrid3DCL, globalWorkGroupSize, localWorkGroupSize,
-                              profilingEvent);
+            importanceUniformGrid3D_->data.getEditableRepresentation<BufferCL>();
+            computeImportance(minMaxUniformGrid3DCL, prevMinMaxUniformGrid3DCL,
+                              volumeDifferenceInfoCL, nElements, importanceUniformGrid3DCL,
+                              globalWorkGroupSize, localWorkGroupSize, profilingEvent);
         }
-
+        
     } else {
         // Transfer function changed
         if (useGLSharing_) {
             SyncCLGL glSync;
             auto minMaxUniformGrid3DCL = minMaxUniformGrid3D->data.getRepresentation<BufferCLGL>();
-
+            
             auto importanceUniformGrid3DCL =
-                importanceUniformGrid3D_->data.getEditableRepresentation<BufferCLGL>();
+            importanceUniformGrid3D_->data.getEditableRepresentation<BufferCLGL>();
             glSync.addToAquireGLObjectList(minMaxUniformGrid3DCL);
             glSync.addToAquireGLObjectList(importanceUniformGrid3DCL);
             glSync.aquireAllObjects();
@@ -200,35 +204,35 @@ void MinMaxUniformGrid3DImportanceCLProcessor::process() {
         } else {
             auto minMaxUniformGrid3DCL = minMaxUniformGrid3D->data.getRepresentation<BufferCL>();
             auto importanceUniformGrid3DCL =
-                importanceUniformGrid3D_->data.getEditableRepresentation<BufferCL>();
+            importanceUniformGrid3D_->data.getEditableRepresentation<BufferCL>();
             computeImportance(minMaxUniformGrid3DCL, nElements, importanceUniformGrid3DCL,
                               globalWorkGroupSize, localWorkGroupSize, profilingEvent);
         }
     }
     prevMinMaxUniformGrid3D_ =
-        std::dynamic_pointer_cast<const MinMaxUniformGrid3D>(minMaxUniformGrid3DInport_.getData());
-
+    std::dynamic_pointer_cast<const MinMaxUniformGrid3D>(minMaxUniformGrid3DInport_.getData());
+    
     invalidationFlag_ = InvalidationReason(0);
 }
 
 void MinMaxUniformGrid3DImportanceCLProcessor::computeImportance(
-    const BufferCLBase *minMaxUniformGridCL, size_t nElements,
-    BufferCLBase *importanceUniformGridCL, const size_t &globalWorkGroupSize,
-    const size_t &localWorkgroupSize, cl::Event *event) {
+                                                                 const BufferCLBase *minMaxUniformGridCL, size_t nElements,
+                                                                 BufferCLBase *importanceUniformGridCL, const size_t &globalWorkGroupSize,
+                                                                 const size_t &localWorkgroupSize, cl::Event *event) {
     // Transfer function parameters
-
+    
     try {
         auto positionsCL = tfPointPositions_.getRepresentation<BufferCL>();
         auto colorsCL = tfPointColors_.getRepresentation<BufferCL>();
         // Make weights sum to 1
         auto weightNormalization = colorWeight_.get() + colorDiffWeight_.get() +
-                                   opacityDiffWeight_.get() + opacityWeight_.get();
+        opacityDiffWeight_.get() + opacityWeight_.get();
         if (weightNormalization <= 0.f) {
             weightNormalization = 1.f;
         }
-
+        
         auto labColorNormalizationFactor = getLabColorNormalizationFactor();
-
+        
         int argIndex = 0;
         kernel_->setArg(argIndex++, *minMaxUniformGridCL);
         kernel_->setArg(argIndex++, static_cast<int>(nElements));
@@ -239,32 +243,33 @@ void MinMaxUniformGrid3DImportanceCLProcessor::computeImportance(
         kernel_->setArg(argIndex++,
                         colorWeight_.get() * labColorNormalizationFactor / (weightNormalization));
         kernel_->setArg(argIndex++, colorDiffWeight_.get() * labColorNormalizationFactor /
-                                        (weightNormalization));
+                        (weightNormalization));
         kernel_->setArg(argIndex++, opacityDiffWeight_.get() / weightNormalization);
         kernel_->setArg(argIndex++, opacityWeight_.get() / weightNormalization);
-
+        
         kernel_->setArg(argIndex++, *importanceUniformGridCL);
         OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(
-            *kernel_, cl::NullRange, globalWorkGroupSize, localWorkgroupSize, NULL, event);
+                                                          *kernel_, cl::NullRange, globalWorkGroupSize, localWorkgroupSize, NULL, event);
     } catch (cl::Error &err) {
         LogError(getCLErrorString(err));
     }
 }
 
 void MinMaxUniformGrid3DImportanceCLProcessor::computeImportance(
-    const BufferCLBase *minMaxUniformGridCL, const BufferCLBase *prevMinMaxUniformGridCL, const BufferCLBase *volumeDifferenceInfoUniformGridCL,
-    size_t nElements, BufferCLBase *importanceUniformGridCL, const size_t &globalWorkGroupSize,
-    const size_t &localWorkgroupSize, cl::Event *event) {
+                                                                 const BufferCLBase *minMaxUniformGridCL, const BufferCLBase *prevMinMaxUniformGridCL,
+                                                                 const BufferCLBase *volumeDifferenceInfoUniformGridCL, size_t nElements,
+                                                                 BufferCLBase *importanceUniformGridCL, const size_t &globalWorkGroupSize,
+                                                                 const size_t &localWorkgroupSize, cl::Event *event) {
     try {
         auto positionsCL = tfPointPositions_.getRepresentation<BufferCL>();
         auto colorsCL = tfPointColors_.getRepresentation<BufferCL>();
         // Make weights sum to 1
         auto weightNormalization = colorWeight_.get() + colorDiffWeight_.get() +
-                                   opacityDiffWeight_.get() + opacityWeight_.get();
+        opacityDiffWeight_.get() + opacityWeight_.get();
         if (weightNormalization <= 0.f) {
             weightNormalization = 1.f;
         }
-
+        
         auto labColorNormalizationFactor = getLabColorNormalizationFactor();
         int argIndex = 0;
         timeVaryingKernel_->setArg(argIndex++, *minMaxUniformGridCL);
@@ -275,13 +280,13 @@ void MinMaxUniformGrid3DImportanceCLProcessor::computeImportance(
         timeVaryingKernel_->setArg(argIndex++, *colorsCL);
         timeVaryingKernel_->setArg(argIndex++, static_cast<int>(tfPointImportanceSize_));
         timeVaryingKernel_->setArg(
-            argIndex++, colorWeight_.get() * labColorNormalizationFactor / (weightNormalization));
+                                   argIndex++, colorWeight_.get() * labColorNormalizationFactor / (weightNormalization));
         timeVaryingKernel_->setArg(
-            argIndex++,
-            colorDiffWeight_.get() * labColorNormalizationFactor / (weightNormalization));
+                                   argIndex++,
+                                   colorDiffWeight_.get() * labColorNormalizationFactor / (weightNormalization));
         timeVaryingKernel_->setArg(argIndex++, opacityDiffWeight_.get() / weightNormalization);
         timeVaryingKernel_->setArg(argIndex++, opacityWeight_.get() / weightNormalization);
-
+        
         timeVaryingKernel_->setArg(argIndex++, *importanceUniformGridCL);
         OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(*timeVaryingKernel_, cl::NullRange,
                                                           globalWorkGroupSize, localWorkgroupSize,
@@ -297,9 +302,9 @@ float MinMaxUniformGrid3DImportanceCLProcessor::getLabColorNormalizationFactor()
 }
 
 void MinMaxUniformGrid3DImportanceCLProcessor::updateTransferFunctionData() {
-    if (transferFunction_.get().getNumPoints() == 0) {
+    if (transferFunction_.get().size() == 0) {
         tfPointImportanceSize_ = 2;
-        if (tfPointPositions_.getSize() < tfPointImportanceSize_) {
+        if (static_cast<int>(tfPointPositions_.getSize()) < tfPointImportanceSize_) {
             tfPointPositions_.setSize(tfPointImportanceSize_);
             tfPointColors_.setSize(tfPointImportanceSize_);
         }
@@ -309,57 +314,57 @@ void MinMaxUniformGrid3DImportanceCLProcessor::updateTransferFunctionData() {
         (*colors)[0] = vec4(0.f);
         (*positions)[1] = 1;
         (*colors)[1] = vec4(0.f);
-
+        
     } else {
-        const TransferFunctionDataPoint *firstPoint = transferFunction_.get().getPoint(0);
-        const TransferFunctionDataPoint *lastPoint = transferFunction_.get().getPoint(
-            static_cast<int>(transferFunction_.get().getNumPoints() - 1));
-        tfPointImportanceSize_ = transferFunction_.get().getNumPoints();
-        if (firstPoint->getPos().x > 0.f) {
+        auto firstPoint = transferFunction_.get().get(0);
+        auto lastPoint =
+        transferFunction_.get().get(static_cast<int>(transferFunction_.get().size() - 1));
+        tfPointImportanceSize_ = static_cast<int>(transferFunction_.get().size());
+        if (firstPoint.getPosition() > 0.f) {
             ++tfPointImportanceSize_;
         }
-        if (lastPoint->getPos().x < 1.f) {
+        if (lastPoint.getPosition() < 1.f) {
             ++tfPointImportanceSize_;
         }
-
-        if (tfPointPositions_.getSize() < tfPointImportanceSize_) {
+        
+        if (static_cast<int>(tfPointPositions_.getSize()) < tfPointImportanceSize_) {
             tfPointPositions_.setSize(tfPointImportanceSize_);
             tfPointColors_.setSize(tfPointImportanceSize_);
         }
         auto positions = tfPointPositions_.getEditableRAMRepresentation();
         auto colors = tfPointColors_.getEditableRAMRepresentation();
-
+        
         int pointId = 0;
-        if (firstPoint->getPos().x > 0.f) {
+        if (firstPoint.getPosition() > 0.f) {
             (*positions)[0] = 0;
             if (useAssociatedColor_)
-                (*colors)[0] = firstPoint->getRGBA() * firstPoint->getRGBA().w;
+            (*colors)[0] = firstPoint.getColor() * firstPoint.getAlpha();
             else
-                (*colors)[0] = firstPoint->getRGBA();
+            (*colors)[0] = firstPoint.getColor();
             ++pointId;
         }
-        for (auto i = 0; i < transferFunction_.get().getNumPoints(); ++i, ++pointId) {
-            const TransferFunctionDataPoint *point = transferFunction_.get().getPoint(i);
-            (*positions)[pointId] = point->getPos().x;
+        for (auto i = 0u; i < transferFunction_.get().size(); ++i, ++pointId) {
+            auto point = transferFunction_.get().get(i);
+            (*positions)[pointId] = static_cast<float>(point.getPosition());
             if (useAssociatedColor_)
-                (*colors)[pointId] = point->getRGBA() * point->getRGBA().w;
+            (*colors)[pointId] = point.getColor() * point.getAlpha();
             else
-                (*colors)[pointId] = point->getRGBA();
+            (*colors)[pointId] = point.getColor();
         }
-        if (lastPoint->getPos().x < 1.f) {
+        if (lastPoint.getPosition() < 1.) {
             (*positions)[pointId] = 1.f;
             if (useAssociatedColor_)
-                (*colors)[pointId++] = lastPoint->getRGBA() * lastPoint->getRGBA().w;
+            (*colors)[pointId++] = lastPoint.getColor() * lastPoint.getAlpha();
             else
-                (*colors)[pointId++] = lastPoint->getRGBA();
+            (*colors)[pointId++] = lastPoint.getColor();
         }
     }
 }
 
 void MinMaxUniformGrid3DImportanceCLProcessor::updateTransferFunctionDifferenceData() {
-    if (transferFunction_.get().getNumPoints() == 0 && prevTransferFunction_.getNumPoints() == 0) {
+    if (transferFunction_.get().size() == 0 && prevTransferFunction_.size() == 0) {
         tfPointImportanceSize_ = 2;
-        if (tfPointPositions_.getSize() < tfPointImportanceSize_) {
+        if (static_cast<int>(tfPointPositions_.getSize()) < tfPointImportanceSize_) {
             tfPointPositions_.setSize(tfPointImportanceSize_);
             tfPointColors_.setSize(tfPointImportanceSize_);
         }
@@ -369,50 +374,55 @@ void MinMaxUniformGrid3DImportanceCLProcessor::updateTransferFunctionDifferenceD
         (*colors)[0] = vec4(0.f);
         (*positions)[1] = 0;
         (*colors)[1] = vec4(0.f);
-
+        
     } else {
-        auto maxSize =
-            transferFunction_.get().getNumPoints() + prevTransferFunction_.getNumPoints() + 2;
+        auto maxSize = transferFunction_.get().size() + prevTransferFunction_.size() + 2;
         if (tfPointPositions_.getSize() < maxSize) {
             tfPointPositions_.setSize(maxSize);
             tfPointColors_.setSize(maxSize);
         }
         auto positions = tfPointPositions_.getEditableRAMRepresentation();
         auto colors = tfPointColors_.getEditableRAMRepresentation();
-
-        const TransferFunctionDataPoint *firstPoint = transferFunction_.get().getPoint(0);
-        const TransferFunctionDataPoint *prevFirstPoint = prevTransferFunction_.getPoint(0);
-
+        
+        auto firstPoint = transferFunction_.get().get(0);
+        //auto lastPoint =
+        //    transferFunction_.get().get(static_cast<int>(transferFunction_.get().size() - 1));
+        auto prevFirstPoint = prevTransferFunction_.get(0);
+        //auto prevLastPoint =
+        //    prevTransferFunction_.get(static_cast<int>(prevTransferFunction_.size() - 1));
+        
         int outId = 0;
         int id = 0, prevId = 0;
-        TransferFunctionDataPoint p1, p2;
-        p1 = p2 = TransferFunctionDataPoint(
-            *firstPoint < *prevFirstPoint ? firstPoint->getPos() : prevFirstPoint->getPos(),
-            tfPointColorDiff(firstPoint->getRGBA(), prevFirstPoint->getRGBA()));
-        if (firstPoint->getPos().x != prevFirstPoint->getPos().x && 
-            firstPoint->getPos().y == 0.f && prevFirstPoint->getPos().y == 0.f) {
+        TFPrimitive p1, p2;
+        p1 = p2 = TFPrimitive(firstPoint < prevFirstPoint ? firstPoint.getPosition()
+                              : prevFirstPoint.getPosition(),
+                              tfPointColorDiff(firstPoint.getColor(), prevFirstPoint.getColor()));
+        if (firstPoint.getPosition() != prevFirstPoint.getPosition() &&
+            firstPoint.getAlpha() == 0.f && prevFirstPoint.getAlpha() == 0.f) {
             // Moved first point with zero opacity
-            if (*firstPoint < *prevFirstPoint) {
-                auto a2 = *transferFunction_.get().getPoint(std::min(1, static_cast<int>(transferFunction_.get().getNumPoints() - 1)));
-                auto p = mix(*firstPoint, a2, *prevFirstPoint);
-                p2 = TransferFunctionDataPoint(prevFirstPoint->getPos(),
-                    tfPointColorDiff(prevFirstPoint->getRGBA(), p.getRGBA()));
+            if (firstPoint < prevFirstPoint) {
+                auto a2 = transferFunction_.get().get(
+                                                      std::min(1, static_cast<int>(transferFunction_.get().size() - 1)));
+                auto p = mix(firstPoint, a2, prevFirstPoint);
+                p2 = TFPrimitive(prevFirstPoint.getPosition(),
+                                 tfPointColorDiff(prevFirstPoint.getColor(), p.getColor()));
             } else {
-                auto a2 = *prevTransferFunction_.getPoint(std::min(1, static_cast<int>(prevTransferFunction_.getNumPoints() - 1)));
-                auto p = mix(*prevFirstPoint, a2, *firstPoint);
-                p2 = TransferFunctionDataPoint(firstPoint->getPos(),
-                    tfPointColorDiff(firstPoint->getRGBA(), p.getRGBA()));
+                auto a2 = prevTransferFunction_.get(
+                                                    std::min(1, static_cast<int>(prevTransferFunction_.size() - 1)));
+                auto p = mix(prevFirstPoint, a2, firstPoint);
+                p2 = TFPrimitive(firstPoint.getPosition(),
+                                 tfPointColorDiff(firstPoint.getColor(), p.getColor()));
             }
         }
-        if (p1.getPos().x > 0.f &&
-            (firstPoint->getPos().y > 0.f || prevFirstPoint->getPos().y > 0.f) &&
-            glm::any(glm::epsilonNotEqual(p1.getRGBA(), vec4(0), TFPointEpsilon_.get()))) {
+        if (p1.getPosition() > 0.f &&
+            (firstPoint.getAlpha() > 0.f || prevFirstPoint.getAlpha() > 0.f) &&
+            glm::any(glm::epsilonNotEqual(p1.getColor(), vec4(0), TFPointEpsilon_.get()))) {
             (*positions)[outId] = 0.f;
-            (*colors)[outId] = p1.getRGBA();
+            (*colors)[outId] = p1.getColor();
             ++outId;
             // This point will be added in the loop
-            //(*positions)[outId] = p1.getPos().x;
-            //(*colors)[outId] = p1.getRGBA();
+            //(*positions)[outId] = p1.getPosition().x;
+            //(*colors)[outId] = p1.getColor();
             //++outId;
         } else {
             // Add a point with zero difference
@@ -420,74 +430,69 @@ void MinMaxUniformGrid3DImportanceCLProcessor::updateTransferFunctionDifferenceD
             (*colors)[outId] = vec4(0.f);
             ++outId;
         }
-
-        while (id < transferFunction_.get().getNumPoints() ||
-               prevId < prevTransferFunction_.getNumPoints()) {
+        
+        while (id < static_cast<int>(transferFunction_.get().size()) || prevId < static_cast<int>(prevTransferFunction_.size())) {
             // Only store point if difference is non-zero
             // And the opacity is greater than zero
-            if ((glm::any(glm::epsilonNotEqual(p1.getRGBA(), vec4(0), TFPointEpsilon_.get())) ||
-                glm::any(glm::epsilonNotEqual(p2.getRGBA(), vec4(0), TFPointEpsilon_.get()))) &&
-                (p1.getPos().y > 0.f || p2.getPos().y > 0.f)) {
+            if ((glm::any(glm::epsilonNotEqual(p1.getColor(), vec4(0), TFPointEpsilon_.get())) ||
+                 glm::any(glm::epsilonNotEqual(p2.getColor(), vec4(0), TFPointEpsilon_.get()))) &&
+                (p1.getAlpha() > 0. || p2.getAlpha() > 0.)) {
                 if (outId == 1) {
                     // Add point if all previous have been equal.
-                    (*positions)[outId] = p1.getPos().x;
-                    (*colors)[outId] = p1.getRGBA();
+                    (*positions)[outId] = static_cast<float>(p1.getPosition());
+                    (*colors)[outId] = p1.getColor();
                     ++outId;
                 }
-                (*positions)[outId] = p2.getPos().x;
-                (*colors)[outId] = p2.getRGBA();
+                (*positions)[outId] = static_cast<float>(p2.getPosition());
+                (*colors)[outId] = p2.getColor();
                 ++outId;
             }
             // Advance to next point
-            const auto a1 = transferFunction_.get().getPoint(
-                std::min(id, transferFunction_.get().getNumPoints() - 1));
-            TransferFunctionDataPoint a2;
-            if (id + 1 < transferFunction_.get().getNumPoints() - 1) {
-                a2 = *transferFunction_.get().getPoint(id + 1);
+            const auto a1 = transferFunction_.get().get(
+                                                        std::min(id, static_cast<int>(transferFunction_.get().size()) - 1));
+            TFPrimitive a2;
+            if (id + 1 < static_cast<int>(transferFunction_.get().size()) - 1) {
+                a2 = transferFunction_.get().get(id + 1);
             } else {
-                const auto a =
-                    transferFunction_.get().getPoint(transferFunction_.get().getNumPoints() - 1);
-                a2 = TransferFunctionDataPoint(vec2(1.f, a->getPos().y), a->getRGBA());
+                const auto a = transferFunction_.get().get(transferFunction_.get().size() - 1);
+                a2 = TFPrimitive(1., a.getColor());
             }
-            const auto b1 = prevTransferFunction_.getPoint(
-                std::min(prevId, prevTransferFunction_.getNumPoints() - 1));
-            TransferFunctionDataPoint b2;
-            if (prevId + 1 < prevTransferFunction_.getNumPoints() - 1) {
-                b2 = *prevTransferFunction_.getPoint(prevId + 1);
+            const auto b1 = prevTransferFunction_.get(
+                                                      std::min(prevId, static_cast<int>(prevTransferFunction_.size()) - 1));
+            TFPrimitive b2;
+            if (prevId + 1 < static_cast<int>(prevTransferFunction_.size()) - 1) {
+                b2 = prevTransferFunction_.get(prevId + 1);
             } else {
-                const auto b =
-                    prevTransferFunction_.getPoint(prevTransferFunction_.getNumPoints() - 1);
-                b2 = TransferFunctionDataPoint(vec2(1.f, b->getPos().y), b->getRGBA());
+                const auto b = prevTransferFunction_.get(prevTransferFunction_.size() - 1);
+                b2 = TFPrimitive(1., b.getColor());
             }
             p1 = p2;
             if (a2 < b2) {
                 // Interpolate point in prev TF
-                auto p = mix(*b1, b2, a2);
-                p2 = TransferFunctionDataPoint(a2.getPos(),
-                                               tfPointColorDiff(a2.getRGBA(), p.getRGBA()));
+                auto p = mix(b1, b2, a2);
+                p2 = TFPrimitive(a2.getPosition(), tfPointColorDiff(a2.getColor(), p.getColor()));
                 ++id;
-
+                
             } else if (b2 < a2) {
-                auto p = mix(*a1, a2, b2);
-                p2 = TransferFunctionDataPoint(b2.getPos(),
-                                               tfPointColorDiff(b2.getRGBA(), p.getRGBA()));
+                auto p = mix(a1, a2, b2);
+                p2 = TFPrimitive(b2.getPosition(), tfPointColorDiff(b2.getColor(), p.getColor()));
                 ++prevId;
             } else {
-                p2 = TransferFunctionDataPoint(
-                    a2.getPos().y < b2.getPos().y ? b2.getPos() : a2.getPos(),
-                    tfPointColorDiff(a2.getRGBA(), b2.getRGBA()));
+                p2 =
+                TFPrimitive(a2.getAlpha() < b2.getAlpha() ? b2.getPosition() : a2.getPosition(),
+                            tfPointColorDiff(a2.getColor(), b2.getColor()));
                 ++id;
                 ++prevId;
             }
         }
-        if (p2.getPos().x < 1.f && p2.getPos().y > 0.f) {
-            (*positions)[outId] = p2.getPos().x;
-            (*colors)[outId] = p2.getRGBA();
+        if (p2.getPosition() < 1. && p2.getAlpha() > 0.) {
+            (*positions)[outId] = static_cast<float>(p2.getPosition());
+            (*colors)[outId] = p2.getColor();
             ++outId;
-        } 
-        if ((*positions)[outId - 1] < 1.f) {
+        }
+        if ((*positions)[outId - 1] < 1.) {
             // Add a point with zero difference
-            (*positions)[outId] = 1.f;
+            (*positions)[outId] = 1.;
             (*colors)[outId] = vec4(0.f);
             ++outId;
         }
@@ -502,20 +507,20 @@ inviwo::vec4 MinMaxUniformGrid3DImportanceCLProcessor::tfPointColorDiff(const ve
 }
 
 void MinMaxUniformGrid3DImportanceCLProcessor::setInvalidationReason(
-    InvalidationReason invalidationFlag) {
+                                                                     InvalidationReason invalidationFlag) {
     invalidationFlag_ |= invalidationFlag;
 }
 
-TransferFunctionDataPoint MinMaxUniformGrid3DImportanceCLProcessor::mix(
-    const TransferFunctionDataPoint &a, const TransferFunctionDataPoint &b,
-    const TransferFunctionDataPoint &t) {
-    return mix(a, b, (t.getPos().x - a.getPos().x) / (b.getPos().x - a.getPos().x));
+TFPrimitive MinMaxUniformGrid3DImportanceCLProcessor::mix(const TFPrimitive &a,
+                                                          const TFPrimitive &b,
+                                                          const TFPrimitive &t) {
+    return mix(a, b, (t.getPosition() - a.getPosition()) / (b.getPosition() - a.getPosition()));
 }
 
-inviwo::TransferFunctionDataPoint MinMaxUniformGrid3DImportanceCLProcessor::mix(
-    const TransferFunctionDataPoint &a, const TransferFunctionDataPoint &b, float t) {
-    return TransferFunctionDataPoint(glm::mix(a.getPos(), b.getPos(), t),
-                                     glm::mix(a.getRGBA(), b.getRGBA(), t));
+inviwo::TFPrimitive MinMaxUniformGrid3DImportanceCLProcessor::mix(const TFPrimitive &a,
+                                                                  const TFPrimitive &b, double t) {
+    return TFPrimitive(glm::mix(a.getPosition(), b.getPosition(), t),
+                       glm::mix(a.getColor(), b.getColor(), t));
 }
 
-}  // namespace
+}  // namespace inviwo

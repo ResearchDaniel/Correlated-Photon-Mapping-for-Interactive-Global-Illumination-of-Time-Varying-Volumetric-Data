@@ -57,10 +57,10 @@ LightCLModule::LightCLModule(InviwoApplication* app) : InviwoModule(app, "LightC
     // registerRepresentationConverter(new LightCLDisk2RAMConverter());
 
     // Ports
-    registerPort< LightSamplesInport >("org.inviwo.LightSamplesInport");
-    registerPort< LightSamplesOutport >("org.inviwo.LightSamplesOutport");
+    registerPort<LightSamplesInport>();
+    registerPort<LightSamplesOutport>();
 
-    registerPort< MultiDataInport<LightSamples> >("org.inviwo.LightSamplesMultiInport");
+    registerPort<MultiDataInport<LightSamples> >();
 
     // PropertyWidgets
     // registerPropertyWidget(LightCLPropertyWidgetQt, LightCLProperty, "Default");
@@ -80,5 +80,48 @@ LightCLModule::LightCLModule(InviwoApplication* app) : InviwoModule(app, "LightC
     // registerResource(Resource* resource);    
     OpenCL::getPtr()->addCommonIncludeDirectory(getPath(ModulePath::CL));
 }
+    
+int LightCLModule::getVersion() const { return 1; }
 
-} // namespace
+std::unique_ptr<VersionConverter> LightCLModule::getConverter(int version) const {
+    return util::make_unique<Converter>(version);
+}
+
+LightCLModule::Converter::Converter(int version) : version_(version) {}
+
+bool LightCLModule::Converter::convert(TxElement* root) {
+    auto makerules = []() {
+        std::vector<xml::IdentifierReplacement> repl = {
+            // DirectionalLightSamplerCL
+            {{xml::Kind::processor("com.inviwo.DirectionalLightSamplerCL"),
+                xml::Kind::inport("org.inviwo.MeshInport")},
+                "Scene geometry",
+                "SceneGeometry"},
+            {{xml::Kind::processor("com.inviwo.DirectionalLightSamplerCL"),
+                xml::Kind::outport("org.inviwo.LightSamplesOutport")},
+                "Light samples",
+                "LightSamples"},
+            {{xml::Kind::processor("com.inviwo.DirectionalLightSamplerCL"),
+                xml::Kind::outport("LightSamplesOutport")},
+                "Light samples",
+                "LightSamples"}
+            
+        };
+        return repl;
+    };
+    
+    bool res = false;
+    switch (version_) {
+        case 0: {
+            auto repl = makerules();
+            res |= xml::changeIdentifiers(root, repl);
+        }
+        return res;
+        
+        default:
+        return false;  // No changes
+    }
+    return true;
+}
+
+}  // namespace inviwo

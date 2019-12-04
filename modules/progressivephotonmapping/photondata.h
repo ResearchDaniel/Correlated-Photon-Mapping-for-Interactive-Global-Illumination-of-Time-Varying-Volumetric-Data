@@ -37,21 +37,22 @@
 #include <inviwo/core/common/inviwo.h>
 
 #include <inviwo/core/datastructures/buffer/buffer.h>
+#include <inviwo/core/datastructures/datatraits.h>
 #include <inviwo/core/ports/port.h>
 
 
 namespace inviwo {
 
-    
+
 struct Photon {
     // (float8)(photonPos.x, photonPos.y, photonPos.z, photonPower.x, photonPower.y, photonPower.z, dirAngles.x, dirAngles.y);
     vec3 pos;
     vec3 power; // RGB
     vec2 encodedDirection; // Storing the direction encoded to make struct 8 float * 4 byte = 32 byte => aligned reads
-
+    
     void setDirection(vec3 dir);
     vec3 getDirection() const;
-
+    
 };
 
 struct RecomputedPhotonIndices {
@@ -71,78 +72,78 @@ public:
         Volume              = 1 << 4,
         All = Camera | TransferFunction | Light | Progressive | Volume
     };
-
+    
     PhotonData() = default;
     PhotonData(const PhotonData& other) = default;
-
+    
     virtual ~PhotonData();
-
-
+    
+    
     void copyParamsFrom(const PhotonData& rhs);
     void setSize(size_t numberOfPhotons, int maxPhotonInteractions);
     size_t getNumberOfPhotons() const { return photons_.getSize() / (2 * maxPhotonInteractions_); }
     int getMaxPhotonInteractions() const { return maxPhotonInteractions_; }
-
+    
     void setRadius(double radiusRelativeToSceneSize, double sceneRadius);
-    /** 
+    /**
      * \brief Sets the radius of the next iteration and increases the iteration count by one.
      * See: http ://www.cs.jhu.edu/~misha/ReadingSeminar/Papers/Knaus11.pdf
      * eq. 20: r_(i+1) = r_i*((i+alpha)/(i+1) )^(1/3)
      * (Sphere)
      * The variance and the expected value of the average error vanish if 0 < alpha < 1,
      where ? controls the relative rate of decrease.
-     * @param float alpha How fast the radius should decrease, ]0 1[. A value of 1 will keep the radius the same. 
-     * @return void 
+     * @param float alpha How fast the radius should decrease, ]0 1[. A value of 1 will keep the radius the same.
+     * @return void
      */
     void advanceToNextIteration(double alpha = 0.5f);
-
+    
     /**
-     * \brief Returns the radius of photons relative to the size of the scene. 
+     * \brief Returns the radius of photons relative to the size of the scene.
      * Used to get a measure that is independent on the scale of the world.
-     * A value of one means that getRadius will equal the radius of the scene, 
-     * i.e. half the diagonal of the volume. 
-     * 
-     * @return float 
+     * A value of one means that getRadius will equal the radius of the scene,
+     * i.e. half the diagonal of the volume.
+     *
+     * @return float
      */
     double getRadiusRelativeToSceneSize() const { return getRadius() / sceneRadius_; }
     double getRadius() const { return worldSpaceRadius_; }
-    /** 
+    /**
      * \brief Set radius of photons in world space.
      */
     void setRadius(double radius) { worldSpaceRadius_ = radius; }
-
-    /** 
+    
+    /**
      * \brief Compute progressive photon mapping radius for next iteration.
      *
      * See: http ://www.cs.jhu.edu/~misha/ReadingSeminar/Papers/Knaus11.pdf
      * eq. 20: r_(i+1) = r_i*((i+alpha)/(i+1) )^(1/3)
      * (Sphere)
-     * 
+     *
      * @param float radius The radius of the current iteration
      * @param int iteration Current iteration, first starts at 0
      * @param float alpha How fast the radius should decrease, [0 1[. A value of 1 will keep the radius the same.
      * @return float The radius of the next iteration
      */
     static double progressiveSphereRadius(double radius, int iteration, double alpha);
-
+    
     double getSceneRadius() const { return sceneRadius_; }
-
+    
     void resetIteration() { iteration_ = 0; }
     bool isReset() const { return iteration_ <= 1; }
     
     int iteration() const { return iteration_; }
     void setIteration(int val) { iteration_ = val; }
-
+    
     static double sphereVolume(double radius);
     double getRelativeIrradianceScale() const;
-
+    
     Buffer<vec4> photons_;
-
+    
     static const float defaultRadiusRelativeToSceneRadius;
     static const float defaultSceneRadius;
     static const double scaleToMakeLightPowerOfOneVisibleForDirectionalLightSource;
     static const int defaultNumberOfPhotons{ 256 * 256 };
-
+    
     PhotonData::InvalidationReason getInvalidationReason() const { return invalidationFlag_; }
     void setInvalidationReason(PhotonData::InvalidationReason val);
 protected:
@@ -151,7 +152,7 @@ protected:
     double worldSpaceRadius_ = 0.01;
     int iteration_ = 0; ///< Progressive refinement iteration
     InvalidationReason invalidationFlag_ = InvalidationReason::All;
-
+    
 };
 inline PhotonData::InvalidationReason operator|(PhotonData::InvalidationReason a, PhotonData::InvalidationReason b)
 {
@@ -163,18 +164,36 @@ inline PhotonData::InvalidationReason& operator |=(PhotonData::InvalidationReaso
 }
 
 
+
 template<>
-struct port_traits<PhotonData> {
-    static std::string class_identifier() { return "PhotonData"; }
-    static uvec3 color_code() { return uvec3(239, 204, 0); } // Yellow (Munsell)
-    static std::string data_info(const PhotonData* data) { return "PhotonData"; }
+struct DataTraits<PhotonData> {
+    static std::string classIdentifier() { return "org.inviwo.photondata"; }
+    static std::string dataName() { return "PhotonData"; }
+    static uvec3 colorCode() { return uvec3(239, 204, 0); } // Yellow (Munsell)
+    static std::string info(const PhotonData& data) {
+        using H = utildoc::TableBuilder::Header;
+        using P = Document::PathComponent;
+        Document doc;
+        doc.append("b", "PhotonData", { { "style", "color:white;" } });
+        utildoc::TableBuilder tb(doc.handle(), P::end());
+        tb(H("Size"), data.getNumberOfPhotons());
+        tb(H("Max iterations"), data.getMaxPhotonInteractions());
+        tb(H("Radius"), data.getRadius());
+        return doc;
+    }
 };
 
 template<>
-struct port_traits<RecomputedPhotonIndices> {
-    static std::string class_identifier() { return "RecomputedPhotonIndices"; }
-    static uvec3 color_code() { return uvec3(200, 180, 0); } 
-    static std::string data_info(const RecomputedPhotonIndices* data) { return "RecomputedPhotonIndices"; }
+struct DataTraits<RecomputedPhotonIndices> {
+    static std::string classIdentifier() { return "org.inviwo.recomputedphotonindices"; }
+    static std::string dataName() { return "RecomputedPhotonIndices"; }
+    static uvec3 colorCode() { return uvec3(200, 180, 0); }
+    static std::string info(const RecomputedPhotonIndices& data) {
+        using H = utildoc::TableBuilder::Header;
+        Document doc;
+        doc.append("b", "RecomputedPhotonIndices", { { "style", "color:white;" } });
+        return doc;
+    }
 };
 
 } // namespace

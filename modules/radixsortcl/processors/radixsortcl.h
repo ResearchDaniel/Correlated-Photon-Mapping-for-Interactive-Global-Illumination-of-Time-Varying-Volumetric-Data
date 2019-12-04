@@ -2,7 +2,7 @@
  *
  * Inviwo - Interactive Visualization Workshop
  *
- * Copyright (c) 2014-2016 Inviwo Foundation
+ * Copyright (c) 2014-2019 Inviwo Foundation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +32,7 @@
 
 #include <modules/radixsortcl/radixsortclmoduledefine.h>
 #include <clogs/clogs.h>
+
 #include <inviwo/core/common/inviwo.h>
 #include <inviwo/core/ports/bufferport.h>
 #include <inviwo/core/processors/processor.h>
@@ -69,7 +70,7 @@ public:
     static const ProcessorInfo processorInfo_;
 
 protected:
-    virtual void process();
+    virtual void process() override;
 
     BufferInport keysPort_; ///< Keys to sort
     BufferInport inputPort_; ///< Data belonging to keys

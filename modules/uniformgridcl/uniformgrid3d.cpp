@@ -34,8 +34,14 @@ namespace inviwo {
 
 
 UniformGrid3DBase::UniformGrid3DBase(size3_t cellDimension /*= size3_t(1)*/) : StructuredGridEntity<3>(), cellDimension_(cellDimension) {
-
+    
 }
+
+UniformGrid3DBase::UniformGrid3DBase(const UniformGrid3DBase&) = default;
+
+UniformGrid3DBase::~UniformGrid3DBase() = default;
+
+UniformGrid3DBase& UniformGrid3DBase::operator=(const UniformGrid3DBase& that) = default;
 
 } // namespace
 

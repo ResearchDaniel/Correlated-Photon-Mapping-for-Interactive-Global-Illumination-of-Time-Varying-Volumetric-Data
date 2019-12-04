@@ -35,6 +35,7 @@
 
 #include <modules/lightcl/lightclmoduledefine.h>
 #include <inviwo/core/common/inviwo.h>
+#include <inviwo/core/datastructures/geometry/mesh.h>
 
 #include <modules/opencl/inviwoopencl.h>
 #include <modules/opencl/buffer/bufferclbase.h>

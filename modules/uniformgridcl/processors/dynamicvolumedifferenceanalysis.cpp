@@ -28,6 +28,7 @@
  *********************************************************************************/
 
 #include "dynamicvolumedifferenceanalysis.h"
+#include <inviwo/core/datastructures/volume/volumeram.h>
 
 namespace inviwo {
 

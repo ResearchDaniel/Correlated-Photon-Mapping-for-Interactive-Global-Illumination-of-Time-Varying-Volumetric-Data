@@ -115,10 +115,20 @@ private:
 };
 
 template<>
-struct port_traits<LightSamples> {
-    static std::string class_identifier() { return "LightSamples"; }
-    static uvec3 color_code() { return uvec3(209, 174, 0); } // Darker than photon data 
-    static std::string data_info(const LightSamples* data) { return "LightSamples"; }
+struct DataTraits<LightSamples> {
+    static std::string classIdentifier() { return "org.inviwo.lightsamples"; }
+    static std::string dataName() { return "LightSamples"; }
+    static uvec3 colorCode() { return uvec3(209, 174, 0); } // Darker than photon data
+    static Document info(const LightSamples& data) {
+        using H = utildoc::TableBuilder::Header;
+        using P = Document::PathComponent;
+        Document doc;
+        doc.append("b", "LightSamples", { { "style", "color:white;" } });
+        utildoc::TableBuilder tb(doc.handle(), P::end());
+        tb(H("Size"), data.getSize());
+        tb(H("Iteration"), data.getIteration());
+        return doc;
+    }
 };
 using LightSamplesInport = DataInport<LightSamples>;
 using LightSamplesOutport = DataOutport<LightSamples>;

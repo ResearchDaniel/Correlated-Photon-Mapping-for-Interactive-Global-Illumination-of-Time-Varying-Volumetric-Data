@@ -33,8 +33,9 @@
 #ifndef IVW_LIGHTSOURCESCL_H
 #define IVW_LIGHTSOURCESCL_H
 
-#include <modules/LightCL/LightCLmoduledefine.h>
+#include <modules/lightcl/lightclmoduledefine.h>
 #include <inviwo/core/common/inviwo.h>
+#include <inviwo/core/ports/outport.h>
 #include <inviwo/core/ports/inportiterable.h>
 #include <inviwo/core/datastructures/light/baselightsource.h>
 #include <modules/opencl/buffer/buffercl.h>

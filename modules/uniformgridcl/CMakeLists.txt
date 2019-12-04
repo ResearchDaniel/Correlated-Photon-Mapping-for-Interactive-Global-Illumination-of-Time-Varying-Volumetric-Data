@@ -65,10 +65,6 @@ ivw_group("Shader Files" ${SHADER_FILES})
 #ivw_add_unittest(${TEST_FILES})
 
 #--------------------------------------------------------------------
-# Disable Pre-compiled headers as file is not generated properly on CMake 3.1 ->
-ivw_set_pch_disabled_for_module()
-
-#--------------------------------------------------------------------
 # Create module
 ivw_create_module(${SOURCE_FILES} ${HEADER_FILES} ${SHADER_FILES} ${CL_FILES})
 

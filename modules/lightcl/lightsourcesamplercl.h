@@ -35,8 +35,11 @@
 
 #include <modules/lightcl/lightclmoduledefine.h>
 #include <inviwo/core/common/inviwo.h>
+#include <inviwo/core/datastructures/light/baselightsource.h>
+#include <inviwo/core/datastructures/geometry/mesh.h>
 #include <modules/lightcl/samplegenerator2dcl.h>
 #include <modules/lightcl/lightsample.h>
+
 
 namespace inviwo {
 

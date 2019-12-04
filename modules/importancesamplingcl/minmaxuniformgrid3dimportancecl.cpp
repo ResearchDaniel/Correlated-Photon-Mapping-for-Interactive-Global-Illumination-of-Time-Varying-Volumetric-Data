@@ -41,9 +41,8 @@ namespace inviwo {
 
 
 MinMaxUniformGrid3DImportanceCL::MinMaxUniformGrid3DImportanceCL()
-    : KernelOwner()
-    , tracerKernel_(NULL)
-    , importance_(128 * 128) {
+: KernelOwner()
+, importance_(128 * 128) {
     tracerKernel_ = addKernel("minmaxuniformgrid3dimportance.cl", "uniformGridImportanceKernel");
 }
 
@@ -55,13 +54,15 @@ bool MinMaxUniformGrid3DImportanceCL::computeImportance(const Volume* origVolume
     if (importance_.getSize() != dim.x*dim.y) {
         importance_.setSize(dim.x*dim.y);
     }
-
-
+    
+    
     size2_t localWorkGroupSize(workGroupSize);
     size2_t globalWorkGroupSize(getGlobalWorkGroupSize(dim.x, localWorkGroupSize.x),
-        getGlobalWorkGroupSize(dim.y, localWorkGroupSize.y));
+                                getGlobalWorkGroupSize(dim.y, localWorkGroupSize.y));
+    //const Buffer* volumeMaxBuffer = inport_.getData();
+    
     IVW_OPENCL_PROFILING(profilingEvent, "")
-        bool success;
+    bool success;
     if (useGLSharing) {
         SyncCLGL glSync;
         //const BufferCLGL* volumeMax = volumeMaxBuffer->getRepresentation<BufferCLGL>();
@@ -75,11 +76,11 @@ bool MinMaxUniformGrid3DImportanceCL::computeImportance(const Volume* origVolume
         glSync.addToAquireGLObjectList(exit);
         glSync.addToAquireGLObjectList(importanceBuf);
         glSync.aquireAllObjects();
-
+        
         success = computeImportance(origVolume, uniformGrid3D, uniformGrid3DCL, transferFunction, entry->getLayerCL()->get(),
-            exit->getLayerCL()->get(), importanceBuf, globalWorkGroupSize,
-            localWorkGroupSize,
-            profilingEvent);
+                                    exit->getLayerCL()->get(), importanceBuf, globalWorkGroupSize,
+                                    localWorkGroupSize,
+                                    profilingEvent);
     } else {
         //const BufferCL* volumeMax = volumeMaxBuffer->getRepresentation<BufferCL>();
         const BufferCL* uniformGrid3DCL = uniformGrid3D->data.getRepresentation<BufferCL>();
@@ -87,25 +88,25 @@ bool MinMaxUniformGrid3DImportanceCL::computeImportance(const Volume* origVolume
         const ImageCL* exit = exitPoints->getRepresentation<ImageCL>();
         BufferCL* importanceBuf = importance_.getEditableRepresentation<BufferCL>();
         success = computeImportance(origVolume, uniformGrid3D, uniformGrid3DCL, transferFunction, entry->getLayerCL()->get(),
-            exit->getLayerCL()->get(), importanceBuf, globalWorkGroupSize,
-            localWorkGroupSize,
-            profilingEvent);
+                                    exit->getLayerCL()->get(), importanceBuf, globalWorkGroupSize,
+                                    localWorkGroupSize,
+                                    profilingEvent);
     }
-
+    
     return success;
 }
 
 bool MinMaxUniformGrid3DImportanceCL::computeImportance(const Volume* origVolume, const MinMaxUniformGrid3D* uniformGrid3D, const BufferCLBase* uniformGridCL, const TransferFunction* transferFunction, const cl::Image& entryPoints, const cl::Image& exitPoints, BufferCLBase* importanceBuf, const size2_t& globalWorkGroupSize, const size2_t& localWorkgroupSize, cl::Event* event) {
-    // Transfer function parameters 
-    if (transferFunction->getNumPoints() < 1) {
+    // Transfer function parameters
+    if (transferFunction->size() < 1) {
         return false;
     }
-    const TransferFunctionDataPoint* lastPoint = transferFunction->getPoint(static_cast<int>(transferFunction->getNumPoints() - 1));
+    auto lastPoint = transferFunction->get(static_cast<int>(transferFunction->size() - 1));
     uvec3 cellSize(uniformGrid3D->getCellDimension());
     vec2 transferFunctionMaxMin(
-        transferFunction->getPoint(0)->getPos().y > 0.f ? 0.f : transferFunction->getPoint(0)->getPos().x,
-        lastPoint->getPos().y > 0.f ? 1.f : lastPoint->getPos().x);
-
+                                transferFunction->get(0).getAlpha() > 0.f ? 0.f : transferFunction->get(0).getPosition(),
+                                lastPoint.getAlpha() > 0.f ? 1.f : lastPoint.getPosition());
+    
     try {
         int argIndex = 0;
         tracerKernel_->setArg(argIndex++, *uniformGridCL);
@@ -122,7 +123,7 @@ bool MinMaxUniformGrid3DImportanceCL::computeImportance(const Volume* origVolume
         tracerKernel_->setArg(argIndex++, vec3(cellSize));
         tracerKernel_->setArg(argIndex++, *importanceBuf);
         OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(*tracerKernel_, cl::NullRange, globalWorkGroupSize, localWorkgroupSize, NULL,
-            event);
+                                                          event);
     } catch (cl::Error& err) {
         LogError(getCLErrorString(err));
         return false;
@@ -131,4 +132,3 @@ bool MinMaxUniformGrid3DImportanceCL::computeImportance(const Volume* origVolume
 }
 
 } // namespace
-

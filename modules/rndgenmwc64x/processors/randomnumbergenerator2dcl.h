@@ -34,7 +34,9 @@
 #include <inviwo/core/datastructures/buffer/buffer.h>
 #include <inviwo/core/processors/processor.h>
 #include <inviwo/core/ports/imageport.h>
+#include <inviwo/core/properties/boolproperty.h>
 #include <inviwo/core/properties/buttonproperty.h>
+#include <inviwo/core/properties/ordinalproperty.h>
 #include <modules/opencl/buffer/buffercl.h>
 #include <modules/opencl/image/layerclbase.h>
 #include <modules/opencl/inviwoopencl.h>
@@ -75,7 +77,7 @@ public:
     virtual const ProcessorInfo getProcessorInfo() const override;
     static const ProcessorInfo processorInfo_;
 
-    virtual void process();
+    virtual void process() override;
 protected:
     void nRandomNumbersChanged();
     void regenerate();

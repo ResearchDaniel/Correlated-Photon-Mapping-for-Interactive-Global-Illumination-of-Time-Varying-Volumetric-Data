@@ -33,7 +33,6 @@
 #include <modules/progressivephotonmapping/processor/progressivephotontracercl.h>
 
 #include <modules/opencl/buffer/bufferclgl.h>
-#include <modules/opencl/buffer/elementbufferclgl.h>
 #include <modules/opencl/inviwoopencl.h>
 #include <modules/opencl/syncclgl.h>
 #include <modules/opencl/image/imagecl.h>
@@ -53,7 +52,7 @@
 #include <modules/opengl/texture/textureunit.h>
 
 #include <modules/radixsortcl/processors/radixsortcl.h>
-#ifdef IVW_PROFILING 
+#ifdef IVW_PROFILING
 #define IVW_DETAILED_PROFILING
 #endif
 
@@ -71,49 +70,49 @@ const ProcessorInfo ProgressivePhotonTracerCL::getProcessorInfo() const {
 }
 
 ProgressivePhotonTracerCL::ProgressivePhotonTracerCL()
-    : Processor(), KernelObserver(), KernelOwner()
-    , volumePort_("volume")
-    , recomputationImportanceGrid_("recomputationImportance")
-    , lightSamples_("LightSamples")
-    , outport_("photons")
-    , recomputedIndicesPort_("recomputedIndices")
-    , samplingRate_("samplingRate", "Sampling rate", 1.0f, 1.0f, 15.0f)
-    , radius_("radius", "Photon radius (# voxels)", 2.f, 0.00001f, 200.f)
-    , sceneRadianceScaling_("radianceScale", "Scene radiance scale", 1.f, 0.01f, 100.f)
-    , camera_("camera", "Camera", vec3(0.0f, 0.0f, -2.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), nullptr, InvalidationLevel::Valid)
-    , maxIncrementalPhotonsToUpdate_("maxIncrementalPhotonsToUpdate", "Max photons per update (%)", 100.f, 0.f, 100.f)
-    , equalIncrementalImportance_("equalImportance", "Equal importance", false)
-    , spatialSorting_("spatialSorting", "Spatial sorting", true)
-    , maxScatteringEvents_("maxScatteringEvents", "Max scattering events", 1, 1, 16)
-    , noSingleScattering_("noSingleScattering", "No single scattering", false)
-    // Material properties
-    , transferFunction_("transferFunction", "Transfer function", TransferFunction())
-    , advancedMaterial_("material", "Material")
-    , alphaProp_("alpha", "Progressive alpha", 0.5f, 0.0001f, 1.f)
-    , workGroupSize_("wgsize", "Work group size", ivec2(8, 8), ivec2(0), ivec2(256))
-    , useGLSharing_("glsharing", "Use OpenGL sharing", true)
-    , invalidateRendering_("invalidate", "Invalidate rendering")
-    , enableProgressiveRefinement_("enableRefinement", "Progressive refinement", false)
-    , enableProgressivePhotonRecomputation_("enableProgressiveRecomputation", "Progressive recomputation", true)
-    , clipX_("clipX", "Clip X Slices", 0, 256, 0, 256)
-    , clipY_("clipY", "Clip Y Slices", 0, 256, 0, 256)
-    , clipZ_("clipZ", "Clip Z Slices", 0, 256, 0, 256)
-    , photonData_(std::make_shared<PhotonData>())
-    , axisAlignedBoundingBoxCL_(8, DataFloat32::get(), BufferUsage::Static, nullptr, CL_MEM_READ_ONLY)
-    , progressiveTimer_(100, std::bind(&ProgressivePhotonTracerCL::onTimerEvent, this))
-    , photonTracer_(workGroupSize_.get(), useGLSharing_)
-    , recomputedPhotonIndices_(std::make_shared< RecomputedPhotonIndices >())
+: Processor(), KernelObserver(), KernelOwner()
+, volumePort_("volume")
+, recomputationImportanceGrid_("recomputationImportance")
+, lightSamples_("LightSamples")
+, outport_("photons")
+, recomputedIndicesPort_("recomputedIndices")
+, samplingRate_("samplingRate", "Sampling rate", 1.0f, 1.0f, 15.0f)
+, radius_("radius", "Photon radius (# voxels)", 1.f, 0.00001f, 200.f)
+, sceneRadianceScaling_("radianceScale", "Scene radiance scale", 1.f, 0.01f, 100.f)
+, camera_("camera", "Camera", vec3(0.0f, 0.0f, -2.0f), vec3(0.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), nullptr, InvalidationLevel::Valid)
+, maxIncrementalPhotonsToUpdate_("maxIncrementalPhotonsToUpdate", "Max photons per update (%)", 100.f, 0.f, 100.f)
+, equalIncrementalImportance_("equalImportance", "Equal importance", false)
+, spatialSorting_("spatialSorting", "Spatial sorting", true)
+, maxScatteringEvents_("maxScatteringEvents", "Max scattering events", 1, 1, 16)
+, noSingleScattering_("noSingleScattering", "No single scattering", false)
+// Material properties
+, transferFunction_("transferFunction", "Transfer function", TransferFunction())
+, advancedMaterial_("material", "Material")
+, alphaProp_("alpha", "Progressive alpha", 0.5f, 0.0001f, 1.f)
+, workGroupSize_("wgsize", "Work group size", ivec2(8, 8), ivec2(0), ivec2(256))
+, useGLSharing_("glsharing", "Use OpenGL sharing", true)
+, invalidateRendering_("invalidate", "Invalidate rendering")
+, enableProgressiveRefinement_("enableRefinement", "Progressive refinement", false)
+, enableProgressivePhotonRecomputation_("enableProgressiveRecomputation", "Progressive recomputation", true)
+, clipX_("clipX", "Clip X Slices", 0, 256, 0, 256)
+, clipY_("clipY", "Clip Y Slices", 0, 256, 0, 256)
+, clipZ_("clipZ", "Clip Z Slices", 0, 256, 0, 256)
+, photonData_(std::make_shared<PhotonData>())
+, axisAlignedBoundingBoxCL_(8, DataFloat32::get(), BufferUsage::Static, nullptr, CL_MEM_READ_ONLY)
+, photonTracer_(workGroupSize_.get(), useGLSharing_)
+, progressiveTimer_(Timer::Milliseconds(100), std::bind(&ProgressivePhotonTracerCL::onTimerEvent, this))
+, recomputedPhotonIndices_(std::make_shared< RecomputedPhotonIndices >())
 {
     addPort(volumePort_);
     volumePort_.onChange([this]() {
         invalidateProgressiveRendering(PhotonData::InvalidationReason::Volume); }
-    );
+                         );
     addPort(recomputationImportanceGrid_);
     recomputationImportanceGrid_.setOptional(true);
     recomputationImportanceGrid_.onConnect([this]() {
         invalidateProgressiveRendering(PhotonData::InvalidationReason::All); }
-    );
-
+                                           );
+    
     addPort(lightSamples_);
     lightSamples_.onChange([this]() {
         for (auto lightSourceSample = lightSamples_.begin(), end = lightSamples_.end(); lightSourceSample != end; ++lightSourceSample) {
@@ -122,19 +121,19 @@ ProgressivePhotonTracerCL::ProgressivePhotonTracerCL()
             }
         }
     });
-
+    
     addPort(outport_);
     addPort(recomputedIndicesPort_);
-
-
-
-
+    
+    
+    
+    
     volumePort_.onChange([this] () {
         invalidateProgressiveRendering(PhotonData::InvalidationReason::Volume);
     }
-    );
+                         );
     //lightSamples_.onChange([this]{ invalidateProgressiveRendering(PhotonData::InvalidationReason::Light); });
-
+    
     addProperty(samplingRate_);
     samplingRate_.onChange(this, &ProgressivePhotonTracerCL::kernelArgChanged);
     addProperty(radius_);
@@ -154,16 +153,16 @@ ProgressivePhotonTracerCL::ProgressivePhotonTracerCL()
     advancedMaterial_.specularColorProp.onChange(this, &ProgressivePhotonTracerCL::kernelArgChanged);
     advancedMaterial_.anisotropyProp.onChange(this, &ProgressivePhotonTracerCL::kernelArgChanged);
     alphaProp_.onChange(this, &ProgressivePhotonTracerCL::kernelArgChanged);
-
+    
     addProperty(workGroupSize_);
     workGroupSize_.onChange([this]() { photonTracer_.workGroupSize(workGroupSize_.get()); });
     addProperty(useGLSharing_);
     useGLSharing_.onChange([this]() { photonTracer_.useGLSharing(useGLSharing_); });
     addProperty(camera_);
-    camera_.onChange([this]() { 
+    camera_.onChange([this]() {
         //if (enableProgressiveRefinement_) {
-            invalidateProgressiveRendering(PhotonData::InvalidationReason::Camera);
-            photonData_->setIteration(1);
+        invalidateProgressiveRendering(PhotonData::InvalidationReason::Camera);
+        photonData_->setIteration(1);
         //}
     });
     addProperty(maxIncrementalPhotonsToUpdate_);
@@ -173,7 +172,7 @@ ProgressivePhotonTracerCL::ProgressivePhotonTracerCL()
     addProperty(invalidateRendering_);
     addProperty(enableProgressiveRefinement_);
     addProperty(enableProgressivePhotonRecomputation_);
-
+    
     addProperty(clipX_);
     addProperty(clipY_);
     addProperty(clipZ_);
@@ -183,37 +182,37 @@ ProgressivePhotonTracerCL::ProgressivePhotonTracerCL()
     clipX_.onChange(this, &ProgressivePhotonTracerCL::onClipChange);
     clipY_.onChange(this, &ProgressivePhotonTracerCL::onClipChange);
     clipZ_.onChange(this, &ProgressivePhotonTracerCL::onClipChange);
-
+    
     photonTracer_.addObserver(this);
-
+    
     enableProgressiveRefinement_.onChange(this, &ProgressivePhotonTracerCL::progressiveRefinementChanged);
-
-
+    
+    
     // Get bounding geometry
     vec4 aabb[2];
     aabb[0] = vec4(0.f);
     aabb[1] = vec4(1.f);
     axisAlignedBoundingBoxCL_.upload(aabb, sizeof(aabb));
     progressiveRefinementChanged();
-
+    
     indexToBuffer_ = addKernel("indextobuffer.cl", "indexToBufferKernel");
     thresholdKernel_ = addKernel("threshold.cl", "thresholdKernel");
     lightSampleHashKernel_ = addKernel("hashlightsample.cl", "hashLightSampleKernel");
-
+    
     auto problem = clogs::ReduceProblem();
     problem.setType(clogs::TYPE_INT);
     reduce_ = std::unique_ptr<clogs::Reduce>(new clogs::Reduce(OpenCL::getPtr()->getContext(), OpenCL::getPtr()->getDevice(), problem));
     recomputationImportanceSorter_ = std::unique_ptr<clogs::Radixsort>(new clogs::Radixsort(OpenCL::getPtr()->getContext(), OpenCL::getPtr()->getDevice(),
-        dataFormatToClogsType(photonRecomputationImportance_.getDataFormat()), dataFormatToClogsType(recomputedPhotonIndices_->indicesToRecomputedPhotons.getDataFormat())));
-
+                                                                                            dataFormatToClogsType(photonRecomputationImportance_.getDataFormat()), dataFormatToClogsType(recomputedPhotonIndices_->indicesToRecomputedPhotons.getDataFormat())));
+    
     // Spatially sort indices. I.e. sorting by index is equivalent to sorting spatially.
 #ifdef HASH_SORT_PHOTONS
     recomputationIndexSorter_ = std::unique_ptr<clogs::Radixsort>(new clogs::Radixsort(OpenCL::getPtr()->getContext(), OpenCL::getPtr()->getDevice(),
-        dataFormatToClogsType(recomputedPhotonIndices_->indicesToRecomputedPhotons.getDataFormat()),
-        dataFormatToClogsType(recomputedPhotonIndices_->indicesToRecomputedPhotons.getDataFormat())));
+                                                                                       dataFormatToClogsType(recomputedPhotonIndices_->indicesToRecomputedPhotons.getDataFormat()),
+                                                                                       dataFormatToClogsType(recomputedPhotonIndices_->indicesToRecomputedPhotons.getDataFormat())));
 #else
     recomputationIndexSorter_ = std::unique_ptr<clogs::Radixsort>(new clogs::Radixsort(OpenCL::getPtr()->getContext(), OpenCL::getPtr()->getDevice(),
-        dataFormatToClogsType(recomputedPhotonIndices_->indicesToRecomputedPhotons.getDataFormat())));
+                                                                                       dataFormatToClogsType(recomputedPhotonIndices_->indicesToRecomputedPhotons.getDataFormat())));
 #endif
 }
 
@@ -228,7 +227,7 @@ void ProgressivePhotonTracerCL::process() {
     if (nPhotons != photonData_->getNumberOfPhotons() || maxScatteringEvents_ != photonData_->getMaxPhotonInteractions()) {
         photonData_->setSize(nPhotons, maxScatteringEvents_);
         invalidateProgressiveRendering(PhotonData::InvalidationReason::All);
-
+        
     }
     const Volume* volume = volumePort_.getData().get();
     auto volumeDim = volume->getDimensions();
@@ -236,10 +235,10 @@ void ProgressivePhotonTracerCL::process() {
     // Texture space spacing
     const mat4& textureToIndexMatrix = volumePort_.getData()->getCoordinateTransformer().getTextureToIndexMatrix();
     vec3 voxelSpacing(1.f/glm::length(textureToIndexMatrix[0]), 1.f/glm::length(textureToIndexMatrix[1]), 1.f/glm::length(textureToIndexMatrix[2]));
-
+    
     float stepSize = samplingRate_.get()*std::min(voxelSpacing.x, std::min(voxelSpacing.y, voxelSpacing.z));
-
-
+    
+    
     int maxInteractions = maxScatteringEvents_.get();
     int batch = 0;
     if (static_cast<int>(invalidationFlag_) == 0 ||
@@ -248,11 +247,11 @@ void ProgressivePhotonTracerCL::process() {
          static_cast<int>(PhotonData::InvalidationReason::Camera) |
          static_cast<int>(PhotonData::InvalidationReason::TransferFunction) |
          static_cast<int>(PhotonData::InvalidationReason::Volume))) {
-      photonData_->resetIteration();
-    }
+            photonData_->resetIteration();
+        }
     if (photonData_->iteration() == 0) {
         vec4 radiusInTextureSpace = volume->getCoordinateTransformer().getIndexToTextureMatrix()*vec4(vec3(radius_.get()), 0.f);
-        float radius = glm::length(radiusInTextureSpace.xyz());
+        float radius = glm::length(vec3(radiusInTextureSpace));
         //radius = photonRadiusScaling+0.001f*(radius_.get()-1.f);
         photonData_->setRadius(radius, sceneRadius); // % of scene size
         photonData_->setIteration(1);
@@ -262,11 +261,11 @@ void ProgressivePhotonTracerCL::process() {
     
     std::vector< std::vector<cl::Event> > clEvents;
     // Number of photons to compute this iteration
-    int nPhotonsToCompute = photonData_->getNumberOfPhotons();
+    auto nPhotonsToCompute = photonData_->getNumberOfPhotons();
     if (!(static_cast<int>(invalidationFlag_) & static_cast<int>(PhotonData::InvalidationReason::Light)) && recomputationImportanceGrid_.isReady() && photonRecomputationDetector_.isValid()) {
         //IVW_CPU_PROFILING("recomputation")
         // Compute update priority and only update changed photons
-
+        
         if (photonRecomputationImportance_.getSize() != photonData_->getNumberOfPhotons()) {
             photonRecomputationImportance_.setSize(photonData_->getNumberOfPhotons());
             resetPhotonImportance(0, photonRecomputationImportance_.getSize());
@@ -276,9 +275,9 @@ void ProgressivePhotonTracerCL::process() {
             thresholdPhotonRecomputation_.setSize(photonData_->getNumberOfPhotons());
             photonRecomputationHashed_.setSize(photonData_->getNumberOfPhotons());
         }
-
+        
         SyncCLGL glSync(OpenCL::getPtr()->getContext(), OpenCL::getPtr()->getQueue());
-        auto indicesToRecomputedPhotonsCL = recomputedPhotonIndices_->indicesToRecomputedPhotons.getEditableRepresentation<ElementBufferCLGL>();
+        auto indicesToRecomputedPhotonsCL = recomputedPhotonIndices_->indicesToRecomputedPhotons.getEditableRepresentation<BufferCLGL>();
         // Recompute photons based on importance if Transfer function or volume data changed
         if ((static_cast<int>(invalidationFlag_) & (static_cast<int>(PhotonData::InvalidationReason::TransferFunction) | static_cast<int>(PhotonData::InvalidationReason::Volume)))) {
             int offset = 0;
@@ -288,7 +287,7 @@ void ProgressivePhotonTracerCL::process() {
                 LogError("UniformGrid3DInport require ImportanceUniformGrid3D as input");
                 return;
             }
-
+            
             //{
             //    IVW_CPU_PROFILING("glFinish")
             //        glFinish();
@@ -297,8 +296,8 @@ void ProgressivePhotonTracerCL::process() {
             photonRecomputationDetector_.setIteration(photonRecomputationDetector_.getIteration() + 1);
             clEvents.emplace_back(std::vector<cl::Event>(1));
             for (auto lightSourceSample = lightSamples_.begin(), end = lightSamples_.end();
-                lightSourceSample != end;
-                ++lightSourceSample) {
+                 lightSourceSample != end;
+                 ++lightSourceSample) {
                 //IVW_CPU_PROFILING("photonRecomputationImportance")
                 
                 
@@ -311,9 +310,9 @@ void ProgressivePhotonTracerCL::process() {
                 offset += static_cast<int>(lightSourceSample->getSize());
             }
             
-
-
-        //{ // Scope since photon tracing also synchronizes with GL
+            
+            
+            //{ // Scope since photon tracing also synchronizes with GL
             
             auto nElements = recomputedPhotonIndices_->indicesToRecomputedPhotons.getSize();
             auto workGroupSize = 128;
@@ -322,69 +321,69 @@ void ProgressivePhotonTracerCL::process() {
             auto photonImportanceCL = photonRecomputationImportance_.getEditableRepresentation<BufferCL>();
             glSync.addToAquireGLObjectList(indicesToRecomputedPhotonsCL);
             glSync.aquireAllObjects();
-
-              //{IVW_CPU_PROFILING("thresholdKernel")
-                  // Threshold, all photons with importance > 0 will be marked as invalid.
-                  thresholdKernel_->setArg(0, *photonImportanceCL);
-              // Note: Must use inverse threshold since importance is reversed to enable sorting
-              //unsigned char threshold = 255;
-              const unsigned int threshold = 2147483647u;
-              //const float threshold = ldexp(0x1fffffe, 127 - 4 * 6);
-              auto thresholdedCL = thresholdPhotonRecomputation_.getEditableRepresentation<BufferCL>();
-              thresholdKernel_->setArg(1, threshold);
-              thresholdKernel_->setArg(2, static_cast<int>(thresholdPhotonRecomputation_.getSize()));
-              thresholdKernel_->setArg(3, *thresholdedCL);
-              clEvents.emplace_back(std::vector<cl::Event>(1));
-              OpenCL::getPtr()->getAsyncQueue().enqueueNDRangeKernel(*thresholdKernel_, cl::NullRange, globalWorkSizeX, workGroupSize,
-                  &clEvents[clEvents.size() - 2], &clEvents.back()[0]);
-              //}
-              //auto thresholdedCL = thresholdPhotonRecomputation_.getEditableRepresentation<BufferCL>();
-              clEvents.emplace_back(std::vector<cl::Event>(2));
-              bool blocking = false;
-              auto nPhotonsToRecompute = 0;
-              //{IVW_CPU_PROFILING("CPU reduce")
-              nPhotonsToRecompute = reduceInts(thresholdedCL, thresholdPhotonRecomputation_.getSize(), blocking, &clEvents[clEvents.size() - 2], &clEvents.back()[0], &clEvents.back()[1]);
-              //}
-
-              // Indexing and sorting can be performed at the same time
-              // as thresholding and reduction
+            
+            //{IVW_CPU_PROFILING("thresholdKernel")
+            // Threshold, all photons with importance > 0 will be marked as invalid.
+            thresholdKernel_->setArg(0, *photonImportanceCL);
+            // Note: Must use inverse threshold since importance is reversed to enable sorting
+            //unsigned char threshold = 255;
+            const unsigned int threshold = 2147483647u;
+            //const float threshold = ldexp(0x1fffffe, 127 - 4 * 6);
+            auto thresholdedCL = thresholdPhotonRecomputation_.getEditableRepresentation<BufferCL>();
+            thresholdKernel_->setArg(1, threshold);
+            thresholdKernel_->setArg(2, static_cast<int>(thresholdPhotonRecomputation_.getSize()));
+            thresholdKernel_->setArg(3, *thresholdedCL);
+            clEvents.emplace_back(std::vector<cl::Event>(1));
+            OpenCL::getPtr()->getAsyncQueue().enqueueNDRangeKernel(*thresholdKernel_, cl::NullRange, globalWorkSizeX, workGroupSize,
+                                                                   &clEvents[clEvents.size() - 2], &clEvents.back()[0]);
+            //}
+            //auto thresholdedCL = thresholdPhotonRecomputation_.getEditableRepresentation<BufferCL>();
+            clEvents.emplace_back(std::vector<cl::Event>(2));
+            bool blocking = false;
+            auto nPhotonsToRecompute = 0;
+            //{IVW_CPU_PROFILING("CPU reduce")
+            nPhotonsToRecompute = reduceInts(thresholdedCL, thresholdPhotonRecomputation_.getSize(), blocking, &clEvents[clEvents.size() - 2], &clEvents.back()[0], &clEvents.back()[1]);
+            //}
+            
+            // Indexing and sorting can be performed at the same time
+            // as thresholding and reduction
             //{IVW_CPU_PROFILING("indexToBuffer_")
-                // Reset indices in buffer. I.e. write 0,1,2... at corresponding locations.
-                indexToBuffer_->setArg(0, *indicesToRecomputedPhotonsCL);
+            // Reset indices in buffer. I.e. write 0,1,2... at corresponding locations.
+            indexToBuffer_->setArg(0, *indicesToRecomputedPhotonsCL);
             indexToBuffer_->setArg(1, static_cast<int>(nElements));
             clEvents.emplace_back(std::vector<cl::Event>(1));
             OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(*indexToBuffer_, cl::NullRange, globalWorkSizeX,
-                workGroupSize, &clEvents[clEvents.size() - 4], &clEvents.back()[0]);
+                                                              workGroupSize, &clEvents[clEvents.size() - 4], &clEvents.back()[0]);
             //}
-              // Sort indices by importance
-             //{IVW_CPU_PROFILING("sortIndicesByImportance")
-                 clEvents.emplace_back(std::vector<cl::Event>(1));
-             sortIndicesByImportance(&photonRecomputationImportance_, photonImportanceCL,
-                 &recomputedPhotonIndices_->indicesToRecomputedPhotons, indicesToRecomputedPhotonsCL,
-                 &clEvents[clEvents.size() - 2], &clEvents.back()[0]);
-             //}
+            // Sort indices by importance
+            //{IVW_CPU_PROFILING("sortIndicesByImportance")
+            clEvents.emplace_back(std::vector<cl::Event>(1));
+            sortIndicesByImportance(&photonRecomputationImportance_, photonImportanceCL,
+                                    &recomputedPhotonIndices_->indicesToRecomputedPhotons, indicesToRecomputedPhotonsCL,
+                                    &clEvents[clEvents.size() - 2], &clEvents.back()[0]);
+            //}
             
-
+            
             //copyIndicesEvent[0].wait();
             //LogInfo((remainingPhotonsToUpdate_ >= 0 ?
             //    100.f*static_cast<float>(remainingPhotonsToUpdate_) / static_cast<float>(photonData_->getNumberOfPhotons()) : 0)
             //    << " % invalid photons")
-
-             glSync.releaseAllGLObjects(&clEvents.back());
-             // Wait for computation of number of invalid photons (reduction)
-             clEvents[clEvents.size() - 3].back().wait();
-             //auto elapsedTime = std::accumulate(std::begin(clEvents[clEvents.size() - 3]), std::end(clEvents[clEvents.size() - 3]), 0.f,
-             //    [](float val, const cl::Event& a) {
-             //    return val + a.getElapsedTime(); });
-             //LogInfo("Reduce time: " << elapsedTime);
-             remainingPhotonsOffset_ = 0;
-             if (remainingPhotonsToUpdate_ < 0 || nPhotonsToRecompute > 0) {
-                 remainingPhotonsToUpdate_ = nPhotonsToRecompute;
-             }
-
+            
+            glSync.releaseAllGLObjects(&clEvents.back());
+            // Wait for computation of number of invalid photons (reduction)
+            clEvents[clEvents.size() - 3].back().wait();
+            //auto elapsedTime = std::accumulate(std::begin(clEvents[clEvents.size() - 3]), std::end(clEvents[clEvents.size() - 3]), 0.f,
+            //    [](float val, const cl::Event& a) {
+            //    return val + a.getElapsedTime(); });
+            //LogInfo("Reduce time: " << elapsedTime);
+            remainingPhotonsOffset_ = 0;
+            if (remainingPhotonsToUpdate_ < 0 || nPhotonsToRecompute > 0) {
+                remainingPhotonsToUpdate_ = nPhotonsToRecompute;
+            }
+            
         }
         //}
-
+        
         int maxPhotonsToUpdate = static_cast<int>((maxIncrementalPhotonsToUpdate_ / 100.f)*photonData_->getNumberOfPhotons());
         nPhotonsToCompute = std::min(remainingPhotonsToUpdate_, maxPhotonsToUpdate);
         if (remainingPhotonsOffset_ > 0) {
@@ -409,18 +408,18 @@ void ProgressivePhotonTracerCL::process() {
                 size_t srcOffset = dstOffset + remainingPhotonsOffset_*indicesToRecomputedPhotonsCL->getSizeOfElement();
                 size_t nElementsToCopy = std::min(itemsLeftToCopy, scrOffset);
                 OpenCL::getPtr()->getQueue().enqueueCopyBuffer(indicesToRecomputedPhotonsCL->get(),
-                indicesToRecomputedPhotonsCL->get(), srcOffset, dstOffset,
-                nElementsToCopy, waitForEvents, &clEvents.back()[0]);
-                // Copied N items, 
+                                                               indicesToRecomputedPhotonsCL->get(), srcOffset, dstOffset,
+                                                               nElementsToCopy, waitForEvents, &clEvents.back()[0]);
+                // Copied N items,
                 itemsLeftToCopy -= nElementsToCopy;
                 srcOffset += nElementsToCopy;
                 dstOffset += nElementsToCopy;
             }
             glSync.releaseAllGLObjects(clEvents.size() > 0 ? &clEvents.back() : nullptr);
         }
-
-        recomputedPhotonIndices_->nRecomputedPhotons = nPhotonsToCompute;
-
+        
+        recomputedPhotonIndices_->nRecomputedPhotons = static_cast<int>(nPhotonsToCompute);
+        
         
         if (recomputedPhotonIndices_->nRecomputedPhotons > 0) {
             if (spatialSorting_) {
@@ -430,14 +429,14 @@ void ProgressivePhotonTracerCL::process() {
                 glSync.aquireAllObjects();
                 //IVW_CPU_PROFILING("sortIndices")
 #ifdef HASH_SORT_PHOTONS
-                    // Hash light samples for sorting
-                    int offset = 0;
+                // Hash light samples for sorting
+                int offset = 0;
                 auto hashedSamplesCL = photonRecomputationHashed_.getEditableRepresentation<BufferCL>();
                 auto cellSize = recomputationImportanceGrid->getDimensions();
                 auto nBlocks = recomputationImportanceGrid->getDimensions();
                 for (auto lightSourceSample = lightSamples_.begin(), end = lightSamples_.end();
-                    lightSourceSample != end;
-                    ++lightSourceSample) {
+                     lightSourceSample != end;
+                     ++lightSourceSample) {
                     SyncCLGL glSync;
                     clEvents.emplace_back(std::vector<cl::Event>(1));
                     auto lightSampleCL = lightSourceSample->getLightSamples()->getRepresentation<BufferCLGL>();
@@ -454,23 +453,23 @@ void ProgressivePhotonTracerCL::process() {
                     lightSampleHashKernel_->setArg(6, ivec3(nBlocks));
                     lightSampleHashKernel_->setArg(7, *hashedSamplesCL);
                     lightSampleHashKernel_->setArg(8, offset);
-
+                    
                     size_t workGroupSize = 128;
                     size_t globalWorkGroupSize(getGlobalWorkGroupSize(remainingPhotonsToUpdate_, workGroupSize));
                     OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(*lightSampleHashKernel_, cl::NullRange, globalWorkGroupSize, workGroupSize,
-                        &clEvents[clEvents.size() - 2], &clEvents.back()[0]);
-
+                                                                      &clEvents[clEvents.size() - 2], &clEvents.back()[0]);
+                    
                     offset += static_cast<int>(lightSourceSample->getSize());
                 }
                 clEvents.emplace_back(std::vector<cl::Event>(1));
                 sortIndices(&photonRecomputationHashed_, photonRecomputationHashed_.getEditableRepresentation<BufferCL>(),
-                    &recomputedPhotonIndices_->indicesToRecomputedPhotons, indicesToRecomputedPhotonsCL, remainingPhotonsToUpdate_, &clEvents[clEvents.size() - 2], &clEvents.back()[0]);
+                            &recomputedPhotonIndices_->indicesToRecomputedPhotons, indicesToRecomputedPhotonsCL, remainingPhotonsToUpdate_, &clEvents[clEvents.size() - 2], &clEvents.back()[0]);
 #else
-                    // Sorting on index seem to give same performance as spatial hashing
-                    clEvents.emplace_back(std::vector<cl::Event>(1));
+                // Sorting on index seem to give same performance as spatial hashing
+                clEvents.emplace_back(std::vector<cl::Event>(1));
                 sortIndices(
-                    &recomputedPhotonIndices_->indicesToRecomputedPhotons, indicesToRecomputedPhotonsCL,
-                    &photonRecomputationHashed_, photonRecomputationHashed_.getEditableRepresentation<BufferCL>(), recomputedPhotonIndices_->nRecomputedPhotons, &clEvents[clEvents.size() - 2], &clEvents.back()[0]);
+                            &recomputedPhotonIndices_->indicesToRecomputedPhotons, indicesToRecomputedPhotonsCL,
+                            &photonRecomputationHashed_, photonRecomputationHashed_.getEditableRepresentation<BufferCL>(), recomputedPhotonIndices_->nRecomputedPhotons, &clEvents[clEvents.size() - 2], &clEvents.back()[0]);
 #endif
                 glSync.releaseAllGLObjects(&clEvents.back());
             }
@@ -478,7 +477,7 @@ void ProgressivePhotonTracerCL::process() {
             //
             
             int offset = 0;
-
+            
             for (auto lightSourceSample = lightSamples_.begin(), end = lightSamples_.end(); lightSourceSample != end; ++lightSourceSample) {
                 
                 clEvents.emplace_back(std::vector<cl::Event>(1));
@@ -487,21 +486,18 @@ void ProgressivePhotonTracerCL::process() {
                 if (clEvents.size() > 1) {
                     waitForRecomputationDetection = &clEvents[clEvents.size() - 2];
                 }
-
-                auto volumeDim = volume->getDimensions();
+                
                 // Texture space spacing
                 const mat4 volumeTextureToWorld = volume->getCoordinateTransformer().getTextureToWorldMatrix();
-                const mat4 textureToIndexMatrix = volume->getCoordinateTransformer().getTextureToIndexMatrix();
-                vec3 voxelSpacing(1.f / glm::length(textureToIndexMatrix[0]), 1.f / glm::length(textureToIndexMatrix[1]), 1.f / glm::length(textureToIndexMatrix[2]));
-
+                
                 auto volumeCL = volume->getRepresentation<VolumeCLGL>();
                 auto lightSamplesCL = lightSourceSample->getLightSamples()->getRepresentation<BufferCLGL>();
                 auto intersectionPointsCL = lightSourceSample->getIntersectionPoints()->getRepresentation<BufferCLGL>();
                 auto photonCL = photonData_->photons_.getEditableRepresentation<BufferCLGL>();
-
+                
                 auto transferFunctionCL = transferFunction_.get().getData()->getRepresentation<LayerCLGL>();
                 //const ElementBufferCLGL* photonsToRecomputeIndicesCL = recomputedPhotonIndices_->indicesToRecomputedPhotons.getRepresentation<ElementBufferCLGL>();;
-
+                
                 // Acquire shared representations before using them in OpenGL
                 // The SyncCLGL object will take care of synchronization between OpenGL and OpenCL
                 //{IVW_CPU_PROFILING("Aquire")
@@ -514,16 +510,16 @@ void ProgressivePhotonTracerCL::process() {
                 glSync.aquireAllObjects();
                 //}
                 //{IVW_CPU_PROFILING("Tracing (CPU measurement)")
-                    photonTracer_.tracePhotons(photonData_.get(), volumeCL, volumeCL->getVolumeStruct(volume), &axisAlignedBoundingBoxCL_
-                    , transferFunctionCL, advancedMaterial_, stepSize, lightSamplesCL, intersectionPointsCL, lightSourceSample->getSize(), indicesToRecomputedPhotonsCL, recomputedPhotonIndices_->nRecomputedPhotons
-                    , photonCL, offset, batch, maxInteractions
-                    , waitForRecomputationDetection, &clEvents.back()[0]);
+                photonTracer_.tracePhotons(photonData_.get(), volumeCL, volumeCL->getVolumeStruct(volume), &axisAlignedBoundingBoxCL_
+                                           , transferFunctionCL, advancedMaterial_, stepSize, lightSamplesCL, intersectionPointsCL, lightSourceSample->getSize(), indicesToRecomputedPhotonsCL, recomputedPhotonIndices_->nRecomputedPhotons
+                                           , photonCL, offset, batch, maxInteractions
+                                           , waitForRecomputationDetection, &clEvents.back()[0]);
                 //}
-
-
+                
+                
                 glSync.releaseAllGLObjects(&clEvents.back());
-
-
+                
+                
                 //photonTracer_.tracePhotons(volume, transferFunction_.get(), &axisAlignedBoundingBoxCL_,
                 //    advancedMaterial_, &camera_.get(), stepSize, (*lightSourceSample).get(), &recomputedPhotonIndices_->indicesToRecomputedPhotons, recomputedPhotonIndices_->nRecomputedPhotons, offset, batch
                 //    , maxInteractions, photonData_.get(), waitForRecomputationDetection, &clEvents.back()[0]);
@@ -531,12 +527,12 @@ void ProgressivePhotonTracerCL::process() {
             }
             //clEvents.emplace_back(std::vector<cl::Event>(1));
             resetPhotonImportance(remainingPhotonsOffset_, nPhotonsToCompute);
-
+            
         }
-
-
+        
+        
         remainingPhotonsOffset_ += nPhotonsToCompute;
-        remainingPhotonsToUpdate_ -= nPhotonsToCompute;
+        remainingPhotonsToUpdate_ -= static_cast<int>(nPhotonsToCompute);
         if (remainingPhotonsToUpdate_ > 0 && enableProgressivePhotonRecomputation_) {
             enableProgressiveRefinement_.set(true);
         } else {
@@ -547,8 +543,8 @@ void ProgressivePhotonTracerCL::process() {
         for (auto lightSourceSample = lightSamples_.begin(), end = lightSamples_.end(); lightSourceSample != end; ++lightSourceSample) {
             clEvents.emplace_back(std::vector<cl::Event>(1));
             photonTracer_.tracePhotons(volume, transferFunction_.get(), &axisAlignedBoundingBoxCL_,
-                advancedMaterial_, &camera_.get(), stepSize, (*lightSourceSample).get(), nullptr, 0, offset, batch
-                , maxInteractions, photonData_.get(), nullptr, &clEvents.back()[0]);
+                                       advancedMaterial_, &camera_.get(), stepSize, (*lightSourceSample).get(), nullptr, 0, offset, batch
+                                       , maxInteractions, photonData_.get(), nullptr, &clEvents.back()[0]);
             offset += static_cast<int>(lightSourceSample->getSize());
         }
         recomputedPhotonIndices_->nRecomputedPhotons = -1;
@@ -562,8 +558,8 @@ void ProgressivePhotonTracerCL::process() {
         }
         
     }
-
-#ifdef IVW_DETAILED_PROFILING 
+    
+#ifdef IVW_DETAILED_PROFILING
     if (!clEvents.empty()) {
         try {
             cl::Event* profilingEvent_ = &clEvents.back()[0];
@@ -573,35 +569,35 @@ void ProgressivePhotonTracerCL::process() {
             std::stringstream performanceMessage;
             performanceMessage << logMessage_;
             for (auto it = std::begin(clEvents); it != std::end(clEvents); ++it) {
-                auto elapsedTime = std::accumulate(std::begin(*it), std::end(*it), 0.f, 
-                    [](float val, const cl::Event& a) {
-                    return val + a.getElapsedTime(); });
+                auto elapsedTime = std::accumulate(std::begin(*it), std::end(*it), 0.f,
+                                                   [](float val, const cl::Event& a) {
+                                                       return val + a.getElapsedTime(); });
                 if (it != std::begin(clEvents)) {
                     performanceMessage << " + ";
                 }
                 performanceMessage << elapsedTime;
-
+                
             }
             auto elapsedTime = std::accumulate(std::begin(clEvents), std::end(clEvents), 0.f,
-                [](float val, const std::vector<cl::Event>& a) {
-                return val + std::accumulate(std::begin(a), std::end(a), 0.f, [](float val, const cl::Event& a) { return val + a.getElapsedTime(); });
-            });
+                                               [](float val, const std::vector<cl::Event>& a) {
+                                                   return val + std::accumulate(std::begin(a), std::end(a), 0.f, [](float val, const cl::Event& a) { return val + a.getElapsedTime(); });
+                                               });
             performanceMessage << " = " << elapsedTime << " ms";
             LogInfo(performanceMessage.str());
             //message << std::endl << " " <<
             std::stringstream infoMessage;
             infoMessage << "Computed photons: ";
             infoMessage << nPhotonsToCompute << " = " <<
-                100.f*static_cast<float>(nPhotonsToCompute*photonData_->getMaxPhotonInteractions()) / static_cast<float>(photonData_->getNumberOfPhotons()*photonData_->getMaxPhotonInteractions())
-                << " %";
+            100.f*static_cast<float>(nPhotonsToCompute*photonData_->getMaxPhotonInteractions()) / static_cast<float>(photonData_->getNumberOfPhotons()*photonData_->getMaxPhotonInteractions())
+            << " %";
             LogInfo(infoMessage.str());
         } catch (cl::Error& err) {
             LogError(getCLErrorString(err));
         }
     }
 #endif
-
-
+    
+    
     recomputedIndicesPort_.setData(recomputedPhotonIndices_);
     photonData_->setInvalidationReason(invalidationFlag_);
     invalidationFlag_ = PhotonData::InvalidationReason(0);
@@ -614,7 +610,7 @@ void ProgressivePhotonTracerCL::resetPhotonImportance(size_t offset, size_t nPho
     OpenCL::getPtr()->getQueue().enqueueFillBuffer<unsigned int>(photonImportanceCL->getEditable(), 2147483647u, offset*photonImportanceCL->getSizeOfElement(), nPhotons*photonImportanceCL->getSizeOfElement(), waitForEvents, event);
 }
 
-void ProgressivePhotonTracerCL::onKernelCompiled(const cl::Kernel* kernel) {
+void ProgressivePhotonTracerCL::onKernelCompiled(const cl::Kernel*) {
     invalidateProgressiveRendering(PhotonData::InvalidationReason::All);
     invalidate(InvalidationLevel::InvalidOutput);
 }
@@ -645,10 +641,10 @@ void ProgressivePhotonTracerCL::evaluateProgressiveRefinement() {
 
 void ProgressivePhotonTracerCL::progressiveRefinementChanged() {
     photonTracer_.setProgressive(
-        enableProgressiveRefinement_.get() & 
-        !recomputationImportanceGrid_.isConnected());
+                                 enableProgressiveRefinement_.get() &
+                                 !recomputationImportanceGrid_.isConnected());
     if (enableProgressiveRefinement_.get()) {
-        progressiveTimer_.start(100);
+        progressiveTimer_.start(Timer::Milliseconds(100));
     } else {
         progressiveTimer_.stop();
     }
@@ -662,16 +658,16 @@ void ProgressivePhotonTracerCL::phaseFunctionChanged()
 
 float ProgressivePhotonTracerCL::getSceneRadius() const
 {
-   auto volume = volumePort_.getData();
+    auto volume = volumePort_.getData();
     float scale = 1.f;
-
+    
     if (volume) {
         const mat4& volumeTextureToWorld = volume->getCoordinateTransformer().getTextureToWorldMatrix();
         vec3 worldSpaceExtent(glm::length(volumeTextureToWorld[0]), glm::length(volumeTextureToWorld[1]), glm::length(volumeTextureToWorld[2]));
         //scale = std::max(volumeScaling.x, std::max(volumeScaling.y, volumeScaling.z));
         scale = 0.5f*glm::length(worldSpaceExtent);
     }
-
+    
     return scale;
 }
 
@@ -694,11 +690,11 @@ void ProgressivePhotonTracerCL::sortIndicesByImportance(const BufferBase* keys, 
     try {
         if (sortKeysTempBufferSize_ < keys->getSize()*keys->getDataFormat()->getSize() || sortDataTempBufferSize_ < data->getSize()*data->getDataFormat()->getSize()) {
             recomputationImportanceSorter_->setTemporaryBuffers(cl::Buffer(OpenCL::getPtr()->getContext(), CL_MEM_READ_WRITE, keys->getSize()*keys->getDataFormat()->getSize(), NULL),
-                cl::Buffer(OpenCL::getPtr()->getContext(), CL_MEM_READ_WRITE, data->getSize()*data->getDataFormat()->getSize(), NULL));
+                                                                cl::Buffer(OpenCL::getPtr()->getContext(), CL_MEM_READ_WRITE, data->getSize()*data->getDataFormat()->getSize(), NULL));
             sortKeysTempBufferSize_ = keys->getSize()*keys->getDataFormat()->getSize();
             sortDataTempBufferSize_ = data->getSize()*data->getDataFormat()->getSize();
         }
-
+        
         recomputationImportanceSorter_->enqueue(OpenCL::getPtr()->getQueue(), keysCL->get(), dataCL->get(), static_cast<unsigned int>(keys->getSize()), 0, waitForEvents, event);
     } catch (std::invalid_argument& e) {
         LogError(e.what());
@@ -713,11 +709,11 @@ void ProgressivePhotonTracerCL::sortIndices(const BufferBase* keys, BufferCLBase
     try {
         if (sortIndicesTempBufferSize_ < keys->getSize()*keys->getDataFormat()->getSize()) {
             recomputationIndexSorter_->setTemporaryBuffers(
-                cl::Buffer(OpenCL::getPtr()->getContext(), CL_MEM_READ_WRITE, keys->getSize()*keys->getDataFormat()->getSize(), NULL), 
-                cl::Buffer(OpenCL::getPtr()->getContext(), CL_MEM_READ_WRITE, values->getSize()*values->getDataFormat()->getSize(), NULL));
+                                                           cl::Buffer(OpenCL::getPtr()->getContext(), CL_MEM_READ_WRITE, keys->getSize()*keys->getDataFormat()->getSize(), NULL),
+                                                           cl::Buffer(OpenCL::getPtr()->getContext(), CL_MEM_READ_WRITE, values->getSize()*values->getDataFormat()->getSize(), NULL));
             sortIndicesTempBufferSize_ = keys->getSize()*keys->getDataFormat()->getSize();
         }
-
+        
         recomputationIndexSorter_->enqueue(OpenCL::getPtr()->getQueue(), keysCL->get(), valuesCL->get(), static_cast<unsigned int>(nElements), 0, waitForEvents, event);
     } catch (std::invalid_argument& e) {
         LogError(e.what());
@@ -748,4 +744,3 @@ int ProgressivePhotonTracerCL::reduceInts(const BufferCLBase* dataCL, size_t nEl
 
 
 } // namespace
-

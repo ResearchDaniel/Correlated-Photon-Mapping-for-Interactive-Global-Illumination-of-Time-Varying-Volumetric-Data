@@ -35,13 +35,27 @@
 
 #include <modules/importancesamplingcl/importancesamplingclmoduledefine.h>
 #include <inviwo/core/common/inviwomodule.h>
+#include <inviwo/core/io/serialization/versionconverter.h>
 
 namespace inviwo {
-
+    
 class IVW_MODULE_IMPORTANCESAMPLINGCL_API ImportanceSamplingCLModule : public InviwoModule {
-
+    
 public:
     ImportanceSamplingCLModule(InviwoApplication* app);
+    
+    virtual int getVersion() const override;
+    virtual std::unique_ptr<VersionConverter> getConverter(int version) const override;
+private:
+    class Converter : public VersionConverter {
+    public:
+        Converter(int version);
+        virtual bool convert(TxElement* root) override;
+        
+        private:
+        int version_;
+    };
+    
 };
 
 } // namespace

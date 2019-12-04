@@ -16,8 +16,8 @@ Please cite the article when making use of this code:
 }
 
 #### Build
-1. Download and setup Inviwo (tested with version 0.9.7):
- - Download link: https://github.com/inviwo/inviwo/tree/v0.9.7
+1. Download and setup Inviwo (tested with version 0.9.11):
+ - Download link: https://github.com/inviwo/inviwo/tree/v0.9.11
  - Setup instructions: https://github.com/inviwo/inviwo/wiki
  - OpenCL Required (For Nvidia: https://developer.nvidia.com/cuda-toolkit)
  
@@ -34,9 +34,9 @@ Please cite the article when making use of this code:
  - Be patient: Optimal OpenCL workgroup sizes are found for sorting the first time loading the workspace. 
 
 #### Build system
- - The project and module configuration/generation is performed through CMake (>= 2.8.11).
- - Inviwo has been compiled in Visual Studio (>= 2015), XCode (>= 5), KDevelop (>= 4), Make.
- - C++11 Required
+ - The project and module configuration/generation is performed through CMake (>= 3.12).
+ - Inviwo has been compiled in Visual Studio (>= 2017), XCode (>= 10), Clang 7, GCC 8.
+ - C++17 Required
  - OpenCL Required (For Nvidia: https://developer.nvidia.com/cuda-toolkit)
  - Boost Required
  

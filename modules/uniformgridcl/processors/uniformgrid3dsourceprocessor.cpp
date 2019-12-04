@@ -28,9 +28,12 @@
  *********************************************************************************/
 
 #include "uniformgrid3dsourceprocessor.h"
+#include <inviwo/core/util/filesystem.h>
+#include <inviwo/core/io/datareaderexception.h>
+#include <inviwo/core/io/datareaderfactory.h>
 
 namespace inviwo {
-
+    
 // The Class Identifier has to be globally unique. Use a reverse DNS naming scheme
 const ProcessorInfo UniformGrid3DSourceProcessor::processorInfo_{
     "org.inviwo.UniformGrid3DSourceProcessor",      // Class identifier
@@ -45,33 +48,33 @@ const ProcessorInfo UniformGrid3DSourceProcessor::getProcessorInfo() const {
 }
 
 UniformGrid3DSourceProcessor::UniformGrid3DSourceProcessor()
-    : Processor()
-    , outport_("data")
-    , file_("filename", "File")
-    , reload_("reload", "Reload data")
-    , elementSelector_("Sequence", "Sequence")
-    , isDeserializing_(false) {
+: Processor()
+, outport_("data")
+, file_("filename", "File")
+, reload_("reload", "Reload data")
+, elementSelector_("Sequence", "Sequence")
+, isDeserializing_(false) {
     file_.setContentType("UniformGrid3D");
     file_.setDisplayName("UniformGrid3D file");
-
+    
     file_.onChange([this]() { load(); });
     reload_.onChange([this]() { load(); });
-
+    
     elementSelector_.setVisible(false);
-
+    
     addFileNameFilters();
-
+    
     addPort(outport_);
-
+    
     addProperty(file_);
     addProperty(reload_);
     addProperty(elementSelector_);
 }
-void UniformGrid3DSourceProcessor::load(bool deserialize) {
+void UniformGrid3DSourceProcessor::load(bool) {
     if (isDeserializing_ || file_.get().empty()) return;
-
+    
     auto rf = InviwoApplication::getPtr()->getDataReaderFactory();
-
+    
     std::string ext = filesystem::getFileExtension(file_.get());
     if (auto volVecReader = rf->getReaderForTypeAndExtension<UniformGrid3DVector>(ext)) {
         try {
@@ -92,7 +95,7 @@ void UniformGrid3DSourceProcessor::load(bool deserialize) {
     } else {
         LogProcessorError("Could not find a data reader for file: " << file_.get());
     }
-
+    
     if (volumes_ && !volumes_->empty() && (*volumes_)[0]) {
         elementSelector_.updateMax(volumes_->size());
         elementSelector_.setVisible(volumes_->size() > 1);
@@ -117,9 +120,9 @@ void UniformGrid3DSourceProcessor::process() {
     if (!isDeserializing_ && volumes_ && !volumes_->empty()) {
         //size_t index =
         //    std::min(volumes_->size() - 1, static_cast<size_t>(elementSelector_.index_.get() - 1));
-
+        
         //if (!(*volumes_)[index]) return;
-
+        
         //outport_.setData((*volumes_)[index]);
         outport_.setData(volumes_);
     }

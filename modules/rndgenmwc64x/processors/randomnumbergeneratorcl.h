@@ -31,9 +31,16 @@
 #define IVW_RANDOM_NUMBER_GENERATOR_CL_H
 
 #include <inviwo/core/common/inviwo.h>
+#include <inviwo/core/datastructures/buffer/buffer.h>
 #include <inviwo/core/processors/processor.h>
-#include <inviwo/core/ports/bufferport.h>
+#include <inviwo/core/ports/imageport.h>
+#include <inviwo/core/properties/boolproperty.h>
 #include <inviwo/core/properties/buttonproperty.h>
+#include <inviwo/core/properties/ordinalproperty.h>
+#include <modules/opencl/buffer/buffercl.h>
+#include <modules/opencl/image/layerclbase.h>
+#include <modules/opencl/inviwoopencl.h>
+#include <modules/opencl/kernelowner.h>
 
 
 #include <modules/rndgenmwc64x/rndgenmwc64xmoduledefine.h>
@@ -69,7 +76,7 @@ public:
     static const ProcessorInfo processorInfo_;
 
 protected:
-    virtual void process();
+    virtual void process() override;
 
     void regenerate();
 private:

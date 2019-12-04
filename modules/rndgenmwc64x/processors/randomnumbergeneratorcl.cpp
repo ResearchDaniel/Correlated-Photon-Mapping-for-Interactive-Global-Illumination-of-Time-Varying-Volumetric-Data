@@ -31,6 +31,10 @@
 
 #include <inviwo/core/datastructures/buffer/bufferram.h>
 #include <modules/opencl/inviwoopencl.h>
+#include <modules/opencl/buffer/buffercl.h>
+#include <modules/opencl/buffer/bufferclgl.h>
+#include <modules/opencl/syncclgl.h>
+#include <modules/opencl/kernelmanager.h>
 
 namespace inviwo {
 

@@ -31,11 +31,12 @@
 #include <modules/opencl/buffer/buffercl.h>
 #include <modules/opencl/buffer/bufferclgl.h>
 #include <modules/opencl/syncclgl.h>
+#include <stdexcept>
 
 namespace inviwo {
 
 BufferMixerCL::BufferMixerCL(const size_t& workgroupSize, bool useGLSharing /*= false*/)
-    : KernelOwner(), workGroupSize_(workgroupSize), useGLSharing_(useGLSharing), format_(nullptr), kernel_(nullptr)  {
+: KernelOwner(), format_(nullptr), kernel_(nullptr), workGroupSize_(workgroupSize), useGLSharing_(useGLSharing)  {
     
 }
 
@@ -44,7 +45,7 @@ BufferMixerCL::~BufferMixerCL()  {
 }
 
 void BufferMixerCL::mix(const BufferBase& x, const BufferBase& y, float a, BufferBase& out, const VECTOR_CLASS<cl::Event> *waitForEvents, cl::Event *event) {
-
+    
     if (format_ == nullptr || format_ != x.getDataFormat()) {
         format_ = x.getDataFormat();
         compileKernel();
@@ -65,8 +66,8 @@ void BufferMixerCL::mix(const BufferBase& x, const BufferBase& y, float a, Buffe
         auto outCL = out.getEditableRepresentation<BufferCL>();
         mix(xCL, yCL, a, outCL, out.getSize(), waitForEvents, event);
     }
-
-
+    
+    
 }
 
 void BufferMixerCL::mix(const BufferCLBase* xCL, const BufferCLBase* yCL, float a, BufferCLBase* outCL, size_t nElements, const VECTOR_CLASS<cl::Event> * waitForEvents, cl::Event * event) {
@@ -76,151 +77,151 @@ void BufferMixerCL::mix(const BufferCLBase* xCL, const BufferCLBase* yCL, float 
     kernel_->setArg(argIndex++, a);
     kernel_->setArg(argIndex++, static_cast<unsigned int>(nElements));
     kernel_->setArg(argIndex++, *outCL);
-
-
+    
+    
     size_t globalWorkSizeX = getGlobalWorkGroupSize(nElements, workGroupSize_);
     OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(*kernel_, cl::NullRange, globalWorkSizeX,
-        workGroupSize_, waitForEvents, event);
+                                                      workGroupSize_, waitForEvents, event);
 }
 
 std::string dataFormatToOpenCLType(const DataFormatBase* dataFormat) {
     std::string result;
     switch (dataFormat->getId()) {
-    case DataFormatId::NotSpecialized:
+        case DataFormatId::NotSpecialized:
         break;
-    case DataFormatId::Float16:
+        case DataFormatId::Float16:
         result = "half";
         break;
-    case DataFormatId::Float32:
+        case DataFormatId::Float32:
         result = "float";
         break;
-    case DataFormatId::Float64:
+        case DataFormatId::Float64:
         result = "double";
         break;
-    case DataFormatId::Int8:
+        case DataFormatId::Int8:
         result = "uchar";
         break;
-    case DataFormatId::Int16:
+        case DataFormatId::Int16:
         result = "short";
         break;
-    case DataFormatId::Int32:
+        case DataFormatId::Int32:
         result = "int";
         break;
-    case DataFormatId::Int64:
+        case DataFormatId::Int64:
         result = "long";
         break;
-    case DataFormatId::UInt8:
+        case DataFormatId::UInt8:
         result = "uchar";
         break;
-    case DataFormatId::UInt16:
+        case DataFormatId::UInt16:
         result = "ushort";
         break;
-    case DataFormatId::UInt32:
+        case DataFormatId::UInt32:
         result = "uint";
         break;
-    case DataFormatId::UInt64:
+        case DataFormatId::UInt64:
         result = "ulong";
         break;
-    case DataFormatId::Vec2Float16:
+        case DataFormatId::Vec2Float16:
         result = "half2";
         break;
-    case DataFormatId::Vec2Float32:
+        case DataFormatId::Vec2Float32:
         result = "float2";
         break;
-    case DataFormatId::Vec2Float64:
+        case DataFormatId::Vec2Float64:
         result = "double2";
         break;
-    case DataFormatId::Vec2Int8:
+        case DataFormatId::Vec2Int8:
         result = "char2";
         break;
-    case DataFormatId::Vec2Int16:
+        case DataFormatId::Vec2Int16:
         result = "short2";
         break;
-    case DataFormatId::Vec2Int32:
+        case DataFormatId::Vec2Int32:
         result = "int2";
         break;
-    case DataFormatId::Vec2Int64:
+        case DataFormatId::Vec2Int64:
         result = "long2";
         break;
-    case DataFormatId::Vec2UInt8:
+        case DataFormatId::Vec2UInt8:
         result = "uchar2";
         break;
-    case DataFormatId::Vec2UInt16:
+        case DataFormatId::Vec2UInt16:
         result = "ushort2";
         break;
-    case DataFormatId::Vec2UInt32:
+        case DataFormatId::Vec2UInt32:
         result = "uint2";
         break;
-    case DataFormatId::Vec2UInt64:
+        case DataFormatId::Vec2UInt64:
         result = "ulong2";
         break;
-    case DataFormatId::Vec3Float16:
+        case DataFormatId::Vec3Float16:
         result = "half3";
         break;
-    case DataFormatId::Vec3Float32:
+        case DataFormatId::Vec3Float32:
         result = "float3";
         break;
-    case DataFormatId::Vec3Float64:
+        case DataFormatId::Vec3Float64:
         result = "double3";
         break;
-    case DataFormatId::Vec3Int8:
+        case DataFormatId::Vec3Int8:
         result = "char3";
         break;
-    case DataFormatId::Vec3Int16:
+        case DataFormatId::Vec3Int16:
         result = "short3";
         break;
-    case DataFormatId::Vec3Int32:
+        case DataFormatId::Vec3Int32:
         result = "int3";
         break;
-    case DataFormatId::Vec3Int64:
+        case DataFormatId::Vec3Int64:
         result = "long3";
         break;
-    case DataFormatId::Vec3UInt8:
+        case DataFormatId::Vec3UInt8:
         result = "uchar3";
         break;
-    case DataFormatId::Vec3UInt16:
+        case DataFormatId::Vec3UInt16:
         result = "ushort3";
         break;
-    case DataFormatId::Vec3UInt32:
+        case DataFormatId::Vec3UInt32:
         result = "uint3";
         break;
-    case DataFormatId::Vec3UInt64:
+        case DataFormatId::Vec3UInt64:
         result = "ulong3";
         break;
-    case DataFormatId::Vec4Float16:
+        case DataFormatId::Vec4Float16:
         result = "half4";
         break;
-    case DataFormatId::Vec4Float32:
+        case DataFormatId::Vec4Float32:
         result = "float4";
         break;
-    case DataFormatId::Vec4Float64:
+        case DataFormatId::Vec4Float64:
         result = "double4";
         break;
-    case DataFormatId::Vec4Int8:
+        case DataFormatId::Vec4Int8:
         result = "char4";
         break;
-    case DataFormatId::Vec4Int16:
+        case DataFormatId::Vec4Int16:
         result = "short4";
         break;
-    case DataFormatId::Vec4Int32:
+        case DataFormatId::Vec4Int32:
         result = "int4";
         break;
-    case DataFormatId::Vec4Int64:
+        case DataFormatId::Vec4Int64:
         result = "long4";
         break;
-    case DataFormatId::Vec4UInt8:
+        case DataFormatId::Vec4UInt8:
         result = "uchar4";
         break;
-    case DataFormatId::Vec4UInt16:
+        case DataFormatId::Vec4UInt16:
         result = "ushort4";
         break;
-    case DataFormatId::Vec4UInt32:
+        case DataFormatId::Vec4UInt32:
         result = "uint4";
         break;
-    case DataFormatId::Vec4UInt64:
+        case DataFormatId::Vec4UInt64:
         result = "ulong4";
         break;
-    case DataFormatId::NumberOfFormats:
+        case DataFormatId::NumberOfFormats:
         break;
     }
     return result;
@@ -228,8 +229,8 @@ std::string dataFormatToOpenCLType(const DataFormatBase* dataFormat) {
 
 void BufferMixerCL::compileKernel() {
     if (kernel_)
-        removeKernel(kernel_);
-
+    removeKernel(kernel_);
+    
     std::stringstream header;
     header << " #define MIX_T " << dataFormatToOpenCLType(format_) << '\n';
     if (format_->getComponents() > 1 && format_->getNumericType() != NumericType::Float) {
@@ -239,14 +240,13 @@ void BufferMixerCL::compileKernel() {
         //header << " #define CONVERT_T  \n";
         //header << " #define CONVERT_FLOAT_TO_T   \n";
     }
-
+    
     kernel_ = addKernel("buffermixer.cl", "mixKernel", header.str());
     if (!kernel_) {
         std::string msg("Could not compile kernel in buffermix.cl with header " + header.str());
-        throw std::exception(msg.c_str());
+        throw std::runtime_error(msg);
     }
-       
+    
 }
 
 } // namespace
-

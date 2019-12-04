@@ -35,6 +35,7 @@
 
 #include <modules/lightcl/lightclmoduledefine.h>
 #include <inviwo/core/common/inviwomodule.h>
+#include <inviwo/core/io/serialization/versionconverter.h>
 
 namespace inviwo {
 
@@ -42,6 +43,18 @@ class IVW_MODULE_LIGHTCL_API LightCLModule : public InviwoModule {
 
 public:
     LightCLModule(InviwoApplication* app);
+    virtual int getVersion() const override;
+    virtual std::unique_ptr<VersionConverter> getConverter(int version) const override;
+private:
+    class Converter : public VersionConverter {
+        public:
+            Converter(int version);
+            virtual ~Converter() = default;
+            virtual bool convert(TxElement* root) override;
+        
+            private:
+            int version_;
+        };
 };
 
 } // namespace

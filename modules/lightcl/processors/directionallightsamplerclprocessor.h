@@ -38,6 +38,8 @@
 #include <inviwo/core/ports/meshport.h>
 #include <inviwo/core/ports/bufferport.h>
 #include <inviwo/core/processors/processor.h>
+#include <inviwo/core/properties/ordinalproperty.h>
+#include <inviwo/core/properties/boolproperty.h>
 #include <modules/opencl/inviwoopencl.h>
 #include <modules/opencl/buffer/bufferclbase.h>
 #include <modules/opencl/kernelowner.h>

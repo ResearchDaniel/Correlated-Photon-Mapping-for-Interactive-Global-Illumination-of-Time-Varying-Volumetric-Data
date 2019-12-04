@@ -30,6 +30,7 @@
 
 #include "volumeminmaxclprocessor.h"
 #include <inviwo/core/datastructures/buffer/buffer.h>
+#include <inviwo/core/datastructures/volume/volumeram.h>
 #include <modules/opencl/syncclgl.h>
 #include <modules/opencl/buffer/buffercl.h>
 #include <modules/opencl/buffer/bufferclgl.h>
@@ -39,7 +40,7 @@
 #include <modules/opencl/inviwoopencl.h>
 
 namespace inviwo {
-
+    
 // The Class Identifier has to be globally unique. Use a reverse DNS naming scheme
 const ProcessorInfo VolumeMinMaxCLProcessor::processorInfo_{
     "org.inviwo.VolumeMinMaxCLProcessor",  // Class identifier
@@ -53,30 +54,33 @@ const ProcessorInfo VolumeMinMaxCLProcessor::getProcessorInfo() const {
 }
 
 VolumeMinMaxCLProcessor::VolumeMinMaxCLProcessor()
-    : Processor()
-    , ProcessorKernelOwner(this)
-    , inport_("volume")
-    , outport_("output")
-    , vectorInport_("VolumeSequenceInput")
-    , vectorOutport_("UniformGrid3DVectorOut")
-    , volumeRegionSize_("region", "Region size", 8, 1, 100)
-    , workGroupSize_("wgsize", "Work group size", ivec3(8), ivec3(0), ivec3(256))
-    , useGLSharing_("glsharing", "Use OpenGL sharing", true)
-    //, volumeOut_(new MinMaxUniformGrid3D(size3_t(volumeRegionSize_.get())))
-    , kernel_(nullptr) {
+: Processor()
+, ProcessorKernelOwner(this)
+, inport_("volume")
+, outport_("output")
+, vectorInport_("VolumeSequenceInput")
+, vectorOutport_("UniformGrid3DVectorOut")
+, volumeRegionSize_("region", "Region size", 8, 1, 100)
+, workGroupSize_("wgsize", "Work group size", ivec3(4), ivec3(0), ivec3(256))
+, useGLSharing_("glsharing", "Use OpenGL sharing", true)
+//, volumeOut_(new MinMaxUniformGrid3D(size3_t(volumeRegionSize_.get())))
+, kernel_(nullptr) {
     addPort(inport_);
     addPort(outport_);
-
+    
     addPort(vectorInport_);
     addPort(vectorOutport_);
-
+    
+    inport_.setOptional(true);
+    vectorInport_.setOptional(true);
+    
     addProperty(volumeRegionSize_);
     addProperty(workGroupSize_);
     addProperty(useGLSharing_);
     std::stringstream defines;
-
+    
     //volumeRegionSize_.onChange([this]() {volumeOut_->setCellDimension(size3_t(volumeRegionSize_.get())); });
-
+    
     kernel_ = addKernel("uniformgrid/volumeminmax.cl", "volumeMinMaxKernel");
     
 }
@@ -91,56 +95,52 @@ void VolumeMinMaxCLProcessor::process() {
         auto volumes = vectorInport_.getData().get();
         std::shared_ptr<UniformGrid3DVector> output = std::make_shared<UniformGrid3DVector>();
         auto memSize = OpenCL::getPtr()->getDevice().getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>();
-
+        
         for (auto elem : *volumes)
         {
             auto result = compute(elem.get());
             if (result) {
-                // Remove GPU representations 
+                // Remove GPU representations
                 auto dim = elem->getDimensions();
                 if (dim.x*dim.y*dim.z* elem->getDataFormat()->getSize()*output->size() > memSize / 3) {
                     elem->removeOtherRepresentations(elem->getRepresentation<VolumeRAM>());
                     auto ramRep = result->data.getRAMRepresentation();
                     result->data.removeOtherRepresentations(ramRep);
                 }
-
+                
                 output->emplace_back(std::shared_ptr<UniformGrid3DBase>(result.release()));
             }
-                
+            
         }
         vectorOutport_.setData(output);
-    } 
+    }
     if (inport_.isReady()) {
         auto result = compute(inport_.getData().get());
         if (result)
-            outport_.setData(std::shared_ptr<const UniformGrid3DBase>(result.release()));
+        outport_.setData(std::shared_ptr<const UniformGrid3DBase>(result.release()));
     }
-
-}
-
-bool VolumeMinMaxCLProcessor::isReady() const  {
-    return inport_.isReady() || vectorInport_.isReady();
+    
 }
 
 void VolumeMinMaxCLProcessor::executeVolumeOperation(const Volume* volume,
-    const VolumeCLBase* volumeCL,
-    BufferCLBase* volumeOutCL, const size3_t& outDim,
-    const size3_t& globalWorkGroupSize,
-    const size3_t& localWorkgroupSize) {
+                                                     const VolumeCLBase* volumeCL,
+                                                     BufferCLBase* volumeOutCL, const size3_t& outDim,
+                                                     const size3_t& globalWorkGroupSize,
+                                                     const size3_t& localWorkgroupSize) {
     IVW_OPENCL_PROFILING(profilingEvent, "")
     try {
         int argIndex = 0;
         kernel_->setArg(argIndex++, *volumeCL);
         kernel_->setArg(argIndex++,
-            *(volumeCL->getVolumeStruct(volume)
-            .getRepresentation<BufferCL>()));  // Scaling for 12-bit data
+                        *(volumeCL->getVolumeStruct(volume)
+                          .getRepresentation<BufferCL>()));  // Scaling for 12-bit data
         kernel_->setArg(argIndex++, *volumeOutCL);
         kernel_->setArg(argIndex++, ivec4(outDim, 0));
         kernel_->setArg(argIndex++, ivec4(volumeRegionSize_.get()));
-
+        
         OpenCL::getPtr()->getQueue().enqueueNDRangeKernel(
-            *kernel_, cl::NullRange, globalWorkGroupSize, localWorkgroupSize, nullptr, profilingEvent);
-
+                                                          *kernel_, cl::NullRange, globalWorkGroupSize, localWorkgroupSize, nullptr, profilingEvent);
+        
     } catch (cl::Error& err) {
         LogError(getCLErrorString(err));
     }
@@ -157,28 +157,28 @@ std::unique_ptr<MinMaxUniformGrid3D> VolumeMinMaxCLProcessor::compute(const Volu
         volumeOut_->setWorldMatrix(volume->getWorldMatrix());
         volumeOut_->setDimensions(outDim);
     }
-
+    
     size3_t localWorkGroupSize(workGroupSize_.get());
     size3_t globalWorkGroupSize(getGlobalWorkGroupSize(outDim.x, localWorkGroupSize.x),
-        getGlobalWorkGroupSize(outDim.y, localWorkGroupSize.y),
-        getGlobalWorkGroupSize(outDim.z, localWorkGroupSize.z));
-
+                                getGlobalWorkGroupSize(outDim.y, localWorkGroupSize.y),
+                                getGlobalWorkGroupSize(outDim.z, localWorkGroupSize.z));
+    
     if (useGLSharing_.get()) {
         SyncCLGL glSync;
         const VolumeCLGL* volumeCL = volume->getRepresentation<VolumeCLGL>();
         BufferCLGL* volumeOutCL = volumeOut_->data.getEditableRepresentation<BufferCLGL>();
-
+        
         glSync.addToAquireGLObjectList(volumeCL);
         glSync.addToAquireGLObjectList(volumeOutCL);
         glSync.aquireAllObjects();
-
+        
         executeVolumeOperation(volume, volumeCL, volumeOutCL, outDim, globalWorkGroupSize,
-            localWorkGroupSize);
+                               localWorkGroupSize);
     } else {
         const VolumeCL* volumeCL = volume->getRepresentation<VolumeCL>();
         BufferCLGL* volumeOutCL = volumeOut_->data.getEditableRepresentation<BufferCLGL>();
         executeVolumeOperation(volume, volumeCL, volumeOutCL, outDim, globalWorkGroupSize,
-            localWorkGroupSize);
+                               localWorkGroupSize);
     }
     return volumeOut_;
 }
