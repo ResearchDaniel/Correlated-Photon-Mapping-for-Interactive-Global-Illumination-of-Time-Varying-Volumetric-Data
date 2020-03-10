@@ -431,7 +431,8 @@ void MinMaxUniformGrid3DImportanceCLProcessor::updateTransferFunctionDifferenceD
             ++outId;
         }
         
-        while (id < static_cast<int>(transferFunction_.get().size()) || prevId < static_cast<int>(prevTransferFunction_.size())) {
+while (id < static_cast<int>(transferFunction_.get().size()) || prevId < static_cast<int>(prevTransferFunction_.size())
+               || outId < positions->getSize() ) {
             // Only store point if difference is non-zero
             // And the opacity is greater than zero
             if ((glm::any(glm::epsilonNotEqual(p1.getColor(), vec4(0), TFPointEpsilon_.get())) ||
