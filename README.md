@@ -9,10 +9,10 @@ Please cite the article when making use of this code:
  author       = {J{\"o}nsson, Daniel and Ynnerman, Anders},<br>
   title        = {{Correlated Photon Mapping for Interactive Global Illumination of Time-Varying Volumetric Data}},<br>
   journal      = {IEEE Transactions on Visualization and Computer Graphics (TVCG)},<br>
-  number       = {X},<br>
-  volume       = {X},<br>
-  pages        = {XX - XX},<br>
-  year         = {In press 2016}<br>
+  number       = {1},<br>
+  volume       = {23},<br>
+  pages        = {901 - 910},<br>
+  year         = {2017}<br>
 }
 
 #### Build
