@@ -33,6 +33,8 @@
 #include <modules/radixsortcl/radixsortclmoduledefine.h>
 #include <inviwo/core/common/inviwomodule.h>
 
+#include <filesystem>
+
 namespace inviwo {
 
 class IVW_MODULE_RADIXSORTCL_API RadixSortCLModule: public InviwoModule {
@@ -43,7 +45,7 @@ public:
     virtual ~RadixSortCLModule();
 
 private:
-    void addSourceToClogs(const std::string& path, const std::string& fileName, const std::string& hash);
+    void addSourceToClogs(const std::filesystem::path& path, const std::string& hash);
 
 };
 

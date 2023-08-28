@@ -135,24 +135,24 @@ ProgressivePhotonTracerCL::ProgressivePhotonTracerCL()
     //lightSamples_.onChange([this]{ invalidateProgressiveRendering(PhotonData::InvalidationReason::Light); });
     
     addProperty(samplingRate_);
-    samplingRate_.onChange(this, &ProgressivePhotonTracerCL::kernelArgChanged);
+    samplingRate_.onChange([this]() { kernelArgChanged(); });
     addProperty(radius_);
     radius_.onChange([this]{ invalidateProgressiveRendering(PhotonData::InvalidationReason::All); });
     addProperty(maxScatteringEvents_);
     addProperty(noSingleScattering_);
-    noSingleScattering_.onChange(this, &ProgressivePhotonTracerCL::noSingleScatteringChanged);
+    noSingleScattering_.onChange([this] { noSingleScatteringChanged(); });
     addProperty(alphaProp_);
     //transferFunction_.setGroupID(advancedMaterial_.getGroupId());
     addProperty(advancedMaterial_);
     addProperty(transferFunction_);
     transferFunction_.onChange([this]{ invalidateProgressiveRendering(PhotonData::InvalidationReason::TransferFunction); });
-    advancedMaterial_.phaseFunctionProp.onChange(this, &ProgressivePhotonTracerCL::phaseFunctionChanged);
+    advancedMaterial_.phaseFunctionProp.onChange([this]() { phaseFunctionChanged(); });
     // Need to override these to invalidate progressive rendering
-    advancedMaterial_.indexOfRefractionProp.onChange(this, &ProgressivePhotonTracerCL::kernelArgChanged);
-    advancedMaterial_.roughnessProp.onChange(this, &ProgressivePhotonTracerCL::kernelArgChanged);
-    advancedMaterial_.specularColorProp.onChange(this, &ProgressivePhotonTracerCL::kernelArgChanged);
-    advancedMaterial_.anisotropyProp.onChange(this, &ProgressivePhotonTracerCL::kernelArgChanged);
-    alphaProp_.onChange(this, &ProgressivePhotonTracerCL::kernelArgChanged);
+    advancedMaterial_.indexOfRefractionProp.onChange([this]() { kernelArgChanged(); });
+    advancedMaterial_.roughnessProp.onChange([this]() { kernelArgChanged(); });
+    advancedMaterial_.specularColorProp.onChange([this]() { kernelArgChanged(); });
+    advancedMaterial_.anisotropyProp.onChange([this]() { kernelArgChanged(); });
+    alphaProp_.onChange([this]() { kernelArgChanged(); });
     
     addProperty(workGroupSize_);
     workGroupSize_.onChange([this]() { photonTracer_.workGroupSize(workGroupSize_.get()); });
@@ -179,13 +179,13 @@ ProgressivePhotonTracerCL::ProgressivePhotonTracerCL()
     clipX_.setVisible(false);
     clipY_.setVisible(false);
     clipZ_.setVisible(false);
-    clipX_.onChange(this, &ProgressivePhotonTracerCL::onClipChange);
-    clipY_.onChange(this, &ProgressivePhotonTracerCL::onClipChange);
-    clipZ_.onChange(this, &ProgressivePhotonTracerCL::onClipChange);
+    clipX_.onChange([this]() { onClipChange(); });
+    clipY_.onChange([this]() { onClipChange(); });
+    clipZ_.onChange([this]() { onClipChange(); });
     
     photonTracer_.addObserver(this);
     
-    enableProgressiveRefinement_.onChange(this, &ProgressivePhotonTracerCL::progressiveRefinementChanged);
+    enableProgressiveRefinement_.onChange([this]() { progressiveRefinementChanged(); });
     
     
     // Get bounding geometry
@@ -565,7 +565,7 @@ void ProgressivePhotonTracerCL::process() {
             cl::Event* profilingEvent_ = &clEvents.back()[0];
             profilingEvent_->wait();
             std::string logMessage_("Photon tracing: ");
-            std::string logSource_(parseTypeIdName(std::string(typeid(this).name())));
+            std::string logSource_(parseTypeIdName(typeid(this).name()));
             std::stringstream performanceMessage;
             performanceMessage << logMessage_;
             for (auto it = std::begin(clEvents); it != std::end(clEvents); ++it) {

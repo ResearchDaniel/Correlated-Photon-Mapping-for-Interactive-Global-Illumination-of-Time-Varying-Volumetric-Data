@@ -72,7 +72,7 @@ RandomNumberGeneratorCL::RandomNumberGeneratorCL()
     seed_.onChange([this]() { randomNumberGenerator_.setSeed(seed_); });
     workGroupSize_.onChange([this]() { randomNumberGenerator_.setWorkGroupSize(workGroupSize_); });
     useGLSharing_.onChange([this]() { randomNumberGenerator_.setUseGLSharing(useGLSharing_); });
-    regenerateNumbers_.onChange(this, &RandomNumberGeneratorCL::regenerate);
+    regenerateNumbers_.onChange([this]() { invalidate(InvalidationLevel::InvalidOutput); });
 
     randomNumbersPort_.setData(randomNumbersOut_);
 }
@@ -93,9 +93,6 @@ void RandomNumberGeneratorCL::process() {
 
 }
 
-void RandomNumberGeneratorCL::regenerate() {
-    invalidate(InvalidationLevel::InvalidOutput);
-}
 
 } // inviwo namespace
 

@@ -31,12 +31,11 @@
  *********************************************************************************/
 
 #include "lightsourcescl.h"
-#include <inviwo/core/ports/dataoutport.h>
 
 namespace inviwo {
 
 
-IVW_MODULE_LIGHTCL_API size_t uploadLightSources(InportIterable<LightSource, false>::const_iterator begin, InportIterable<LightSource, false>::const_iterator end, const mat4& transformation, float radianceScale, BufferCL* lightSourcesCLOut) {
+size_t uploadLightSources(std::vector<std::shared_ptr<const LightSource>>::const_iterator begin, std::vector<std::shared_ptr<const LightSource>>::const_iterator end, const mat4& transformation, float radianceScale, BufferCL* lightSourcesCLOut) {
     std::vector<PackedLightSource> packedLights;
     for (auto light = begin; light != end; ++light) {
         if (*light) {

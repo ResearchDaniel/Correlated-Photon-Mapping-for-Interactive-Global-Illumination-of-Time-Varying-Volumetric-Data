@@ -35,6 +35,8 @@
 #include <inviwo/core/util/formatdispatching.h>
 #include <inviwo/core/util/raiiutils.h>
 
+#include <fmt/std.h>
+
 namespace inviwo {
     
 UniformGrid3DReader::UniformGrid3DReader() : DataReaderType<UniformGrid3DVector>() {
@@ -54,17 +56,13 @@ UniformGrid3DReader& UniformGrid3DReader::operator=(const UniformGrid3DReader& t
 
 UniformGrid3DReader* UniformGrid3DReader::clone() const { return new UniformGrid3DReader(*this); }
 
-std::shared_ptr<UniformGrid3DVector> UniformGrid3DReader::readData(const std::string& filePath) {
-    if (!filesystem::fileExists(filePath)) {
-        throw DataReaderException("Error could not find input file: " + filePath, IvwContext);
-    }
+std::shared_ptr<UniformGrid3DVector> UniformGrid3DReader::readData(const std::filesystem::path& filePath) {
     
-    std::string fileDirectory = filesystem::getFileDirectory(filePath);
-    std::string fileExtension = filesystem::getFileExtension(filePath);
+    const auto fileDirectory = filePath.parent_path();
     // Read the file content
-    std::ifstream f(filePath.c_str());
+    auto f = open(filePath);
     std::string textLine;
-    std::string rawFile_;
+    std::filesystem::path rawFile_;
     std::string formatFlag = "";
     glm::mat4 modelMatrix(1.0f);
     glm::mat4 worldMatrix(1.0f);
@@ -91,7 +89,7 @@ std::shared_ptr<UniformGrid3DVector> UniformGrid3DReader::readData(const std::st
         
         std::stringstream ss(value);
         if (key == "objectfilename" || key == "rawfile") {
-            rawFile_ = fileDirectory + "/" + value;
+            rawFile_ = fileDirectory / value;
         } else if (key == "resolution" || key == "dimensions") {
             ss >> resolution.x;
             ss >> resolution.y;
@@ -124,31 +122,34 @@ std::shared_ptr<UniformGrid3DVector> UniformGrid3DReader::readData(const std::st
     // Check if other dat files where specified, and then only consider them as a sequence
     auto dataVector = std::make_shared<UniformGrid3DVector>();
     
-    if (resolution == size4_t(0))
-    throw DataReaderException("Error: Unable to find \"Resolution\" tag in file: " + filePath,
-                              IvwContext);
-    else if (format_ == nullptr)
-    throw DataReaderException("Error: Unable to find \"Format\" tag in file: " + filePath,
-                              IvwContext);
-    else if (format_->getId() == DataFormatId::NotSpecialized)
-    throw DataReaderException(
-                              "Error: Invalid format string found: " + formatFlag + " in " + filePath +
-                              "\nThe valid formats are:\n" +
-                              "FLOAT16, FLOAT32, FLOAT64, INT8, INT16, INT32, INT64, UINT8, UINT16, UINT32, "
-                              "UINT64, Vec2FLOAT16, Vec2FLOAT32, Vec2FLOAT64, Vec2INT8, Vec2INT16, "
-                              "Vec2INT32, Vec2INT64, Vec2UINT8, Vec2UINT16, Vec2UINT32, Vec2UINT64, "
-                              "Vec3FLOAT16, Vec3FLOAT32, Vec3FLOAT64, Vec3INT8, Vec3INT16, Vec3INT32, "
-                              "Vec3INT64, Vec3UINT8, Vec3UINT16, Vec3UINT32, Vec3UINT64, Vec4FLOAT16, "
-                              "Vec4FLOAT32, Vec4FLOAT64, Vec4INT8, Vec4INT16, Vec4INT32, Vec4INT64, "
-                              "Vec4UINT8, Vec4UINT16, Vec4UINT32, Vec4UINT64",
-                              IvwContext);
+    if (resolution == size4_t(0)) {
+        throw DataReaderException(
+            IVW_CONTEXT, "Error: Unable to find \"Resolution\" tag in file: {}", filePath);
+    }
+    else if (format_ == nullptr) {
+        throw DataReaderException(
+            IVW_CONTEXT, "Error: Unable to find \"Format\" tag in file: {}", filePath);
+    }
+    else if (format_->getId() == DataFormatId::NotSpecialized) {
+        throw DataReaderException(
+            IVW_CONTEXT,
+            "Error: Invalid format string found: {} in {} \nThe valid formats are:\n"
+            "FLOAT16, FLOAT32, FLOAT64, INT8, INT16, INT32, INT64, UINT8, UINT16, UINT32, "
+            "UINT64, Vec2FLOAT16, Vec2FLOAT32, Vec2FLOAT64, Vec2INT8, Vec2INT16, "
+            "Vec2INT32, Vec2INT64, Vec2UINT8, Vec2UINT16, Vec2UINT32, Vec2UINT64, "
+            "Vec3FLOAT16, Vec3FLOAT32, Vec3FLOAT64, Vec3INT8, Vec3INT16, Vec3INT32, "
+            "Vec3INT64, Vec3UINT8, Vec3UINT16, Vec3UINT32, Vec3UINT64, Vec4FLOAT16, "
+            "Vec4FLOAT32, Vec4FLOAT64, Vec4INT8, Vec4INT16, Vec4INT32, Vec4INT64, "
+            "Vec4UINT8, Vec4UINT16, Vec4UINT32, Vec4UINT64",
+            formatFlag, filePath);
+    }
     
     std::shared_ptr<UniformGrid3DBase> data =
     dispatching::dispatch<std::shared_ptr<UniformGrid3DBase>, dispatching::filter::All>(format_->getId(), util::UniformGrid3DDispatcher(), size3_t(resolution), size3_t(cellDimensions), BufferUsage::Static);
     
     if (!data) {
         throw DataReaderException(
-                                  "Error: Unsupported data format \"Format\" tag in file: " + filePath, IvwContext);
+            IVW_CONTEXT, "Error: Unsupported data fromat \"Format\" tag in file: {}", filePath);
     }
     data->setModelMatrix(modelMatrix);
     data->setWorldMatrix(worldMatrix);
@@ -170,8 +171,8 @@ std::shared_ptr<UniformGrid3DVector> UniformGrid3DReader::readData(const std::st
             fin.read(static_cast<char*>(dataVector->back()->getData()), bytes);
         }
     } else {
-        throw DataReaderException("Error: Could not read from file: " + rawFile_,
-                                  IvwContextCustom("readBytesIntoBuffer"));
+        throw DataReaderException(
+            IVW_CONTEXT, "Error: Unable to read from  file: {}", rawFile_.string());
     }
     
     std::string size = util::formatBytesToString(bytes * resolution.w);

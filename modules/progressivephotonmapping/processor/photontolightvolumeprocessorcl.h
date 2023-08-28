@@ -85,7 +85,7 @@ public:
     
     virtual void process();
 protected:
-    void executeVolumeOperation(const Volume* volume, const VolumeCLBase* volumeCL, VolumeCLBase* volumeOutCL, const BufferCLBase* photonsCL, const Volume* volumeOut, const size3_t& outDim, const size_t& globalWorkGroupSize, const size_t& localWorkgroupSize, std::vector<cl::Event>* waitForEvents, cl::Event* splatEvent, cl::Event* copyEvent);
+    void executeVolumeOperation(const Volume* volume, const VolumeCLBase* volumeCL, VolumeCLBase* volumeOutCL, const BufferCLBase* photonsCL, const Volume* volumeOut, const size3_t& outDim, const size_t& globalWorkGroupSize, const size_t& localWorkgroupSize, std::vector<cl::Event>* waitForEvents, std::vector<cl::Event>* splatEvent, cl::Event* copyEvent);
     
     void clearBuffer(BufferCL* tmpVolumeCL, size_t outDimFlattened, const size_t& localWorkgroupSize, std::vector<cl::Event>* waitForEvents, cl::Event * events);
     

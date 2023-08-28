@@ -27,67 +27,24 @@
  *
  *********************************************************************************/
 
-#ifndef IVW_UNIFORMGRID3DSOURCEPROCESSOR_H
-#define IVW_UNIFORMGRID3DSOURCEPROCESSOR_H
+#pragma once
 
 #include <modules/uniformgridcl/uniformgridclmoduledefine.h>
-#include <inviwo/core/common/inviwo.h>
-#include <inviwo/core/processors/processor.h>
-#include <inviwo/core/properties/ordinalproperty.h>
-#include <inviwo/core/properties/fileproperty.h>
-#include <inviwo/core/properties/buttonproperty.h>
-#include <modules/base/properties/sequencetimerproperty.h>
+#include <modules/base/processors/datasource.h>
 #include <modules/uniformgridcl/uniformgrid3d.h>
 
 namespace inviwo {
 
-/** \docpage{org.inviwo.UniformGrid3DSourceProcessor, Uniform Grid3DSource Processor}
- * ![](org.inviwo.UniformGrid3DSourceProcessor.png?classIdentifier=org.inviwo.UniformGrid3DSourceProcessor)
- * Explanation of how to use the processor.
- *
- * ### Inports
- *   * __<Inport1>__ <description>.
- *
- * ### Outports
- *   * __<Outport1>__ <description>.
- * 
- * ### Properties
- *   * __<Prop1>__ <description>.
- *   * __<Prop2>__ <description>
- */
 
-
-/**
- * \class UniformGrid3DSourceProcessor
- * \brief <brief description> 
- * <Detailed description from a developer prespective>
- */
-class IVW_MODULE_UNIFORMGRIDCL_API UniformGrid3DSourceProcessor : public Processor { 
+class IVW_MODULE_UNIFORMGRIDCL_API UniformGrid3DSourceProcessor : public DataSource<UniformGrid3DVector, UniformGrid3DVectorOutport> {
 public:
-    UniformGrid3DSourceProcessor();
-    virtual ~UniformGrid3DSourceProcessor() = default;
-     
-    virtual void process() override;
-
     virtual const ProcessorInfo getProcessorInfo() const override;
     static const ProcessorInfo processorInfo_;
-    virtual void deserialize(Deserializer& d) override;
 
-private:
-    void load(bool deserialize = false);
-    void addFileNameFilters();
+    UniformGrid3DSourceProcessor(InviwoApplication* app, const std::filesystem::path& filePath = {});
+    virtual ~UniformGrid3DSourceProcessor() = default;
 
-    std::shared_ptr<UniformGrid3DVector> volumes_;
-
-    UniformGrid3DVectorOutport outport_;
-    FileProperty file_;
-    ButtonProperty reload_;
-
-    SequenceTimerProperty elementSelector_;
-    bool isDeserializing_;
 };
 
 } // namespace
-
-#endif // IVW_UNIFORMGRID3DSOURCEPROCESSOR_H
 
