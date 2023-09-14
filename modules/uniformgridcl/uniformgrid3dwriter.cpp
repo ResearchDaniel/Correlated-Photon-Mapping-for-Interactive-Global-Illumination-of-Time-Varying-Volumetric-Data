@@ -30,44 +30,33 @@
 #include "uniformgrid3dwriter.h"
 #include <inviwo/core/io/datawriterexception.h>
 
+#include <fmt/std.h>
+
 namespace inviwo {
     
-UniformGrid3DWriter::UniformGrid3DWriter()
-//: DataWriterType<UniformGrid3DVector>() {
-: DataWriter() {
+UniformGrid3DWriter::UniformGrid3DWriter(): DataWriterType<UniformGrid3DVector>() {
     addExtension(FileExtension("u3d", "Uniform grid 3D"));
 }
 
-UniformGrid3DWriter::UniformGrid3DWriter(const UniformGrid3DWriter& rhs)
-//: DataWriterType<UniformGrid3DVector>(rhs) {}
-: DataWriter(rhs) {}
+UniformGrid3DWriter::UniformGrid3DWriter(const UniformGrid3DWriter& rhs) = default;
+
+UniformGrid3DWriter& UniformGrid3DWriter::operator=(const UniformGrid3DWriter& that) = default;
 
 UniformGrid3DWriter* UniformGrid3DWriter::clone() const { return new UniformGrid3DWriter(*this); }
 
-UniformGrid3DWriter& UniformGrid3DWriter::operator=(const UniformGrid3DWriter& that) {
-    //if (this != &that) DataWriterType<UniformGrid3DVector>::operator=(that);
-    if (this != &that) DataWriter::operator=(that);
-    
-    return *this;
-}
-
 void UniformGrid3DWriter::writeData(const UniformGrid3DVector* vectorData,
-                                    const std::string filePath) const {
+    const std::filesystem::path& filePath) const {
     if (vectorData->size() < 1) {
         throw DataWriterException("Error: Cannot write empty vector", IvwContext);
     }
-    std::string rawPath = filesystem::replaceFileExtension(filePath, "raw");
-    
-    if (filesystem::fileExists(filePath) && !overwrite_)
-    throw DataWriterException("Error: Output file: " + filePath + " already exists",
-                              IvwContext);
-    
-    if (filesystem::fileExists(rawPath) && !overwrite_)
-    throw DataWriterException("Error: Output file: " + rawPath + " already exists", IvwContext);
-    
-    std::string fileDirectory = filesystem::getFileDirectory(filePath);
-    std::string fileExtension = filesystem::getFileExtension(filePath);
-    std::string fileName = filesystem::getFileNameWithoutExtension(filePath);
+    auto rawPath = filePath;
+    rawPath.replace_extension("raw");
+
+    auto overwrite = getOverwrite();
+    DataWriter::checkOverwrite(filePath, overwrite);
+    DataWriter::checkOverwrite(rawPath, overwrite);
+ 
+    std::string fileName = filePath.stem().string();
     
     auto data = vectorData->front().get();
     // Write the header file content
@@ -86,22 +75,15 @@ void UniformGrid3DWriter::writeData(const UniformGrid3DVector* vectorData,
     
     std::ofstream f(filePath.c_str());
     
-    if (f.good())
-    f << ss.str();
-    else
-    throw DataWriterException("Error: Could not write to file: " + filePath, IvwContext);
+    if (f.good()) {
+        f << ss.str();
+    }
+    else {
+        throw DataWriterException(IVW_CONTEXT_CUSTOM("UniformGrid3DWriter::writeData"),
+            "Could not write to file: {}", filePath);
+    }
+    
     f.close();
-    // std::fstream fout(filePath.c_str(), std::ios::out | std::ios::binary | std::ios::app);
-    
-    // if (fout.good()) {
-    //    for (auto element : *vectorData) {
-    //        fout.write((char*)element->getData(), element->getSizeInBytes());
-    //    }
-    
-    //} else
-    //    throw DataWriterException("Error: Could not write to raw file: " + filePath, IvwContext);
-    
-    // fout.close();
     
     std::fstream fout(rawPath.c_str(), std::ios::out | std::ios::binary);
     
@@ -110,8 +92,11 @@ void UniformGrid3DWriter::writeData(const UniformGrid3DVector* vectorData,
             fout.write((char*)element->getData(), element->getSizeInBytes());
         }
         
-    } else
-    throw DataWriterException("Error: Could not write to raw file: " + rawPath, IvwContext);
+    }
+    else {
+        throw DataWriterException(IVW_CONTEXT_CUSTOM("UniformGrid3DWriter::writeData"),
+            "Could not write to raw file: {}", rawPath);
+    }
     
     fout.close();
 }

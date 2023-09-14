@@ -35,8 +35,6 @@
 
 #include <modules/lightcl/lightclmoduledefine.h>
 #include <inviwo/core/common/inviwo.h>
-#include <inviwo/core/ports/outport.h>
-#include <inviwo/core/ports/inportiterable.h>
 #include <inviwo/core/datastructures/light/baselightsource.h>
 #include <modules/opencl/buffer/buffercl.h>
 #include <modules/opencl/light/packedlightsource.h>
@@ -55,7 +53,7 @@ namespace inviwo {
  * @param BufferCL * lightSourcesCLOut OpenCL buffer with light sources (size = sizeof(PackedLightSource)*lightSources.size()
  * @return the number of uploaded light sources 
  */
-IVW_MODULE_LIGHTCL_API size_t uploadLightSources(InportIterable<LightSource, false>::const_iterator begin, InportIterable<LightSource, false>::const_iterator end, const mat4& transformation, float radianceScale, BufferCL* lightSourcesCLOut);
+IVW_MODULE_LIGHTCL_API size_t uploadLightSources(std::vector<std::shared_ptr<const LightSource>>::const_iterator begin, std::vector<std::shared_ptr<const LightSource>>::const_iterator end, const mat4& transformation, float radianceScale, BufferCL* lightSourcesCLOut);
 
 
 } // namespace

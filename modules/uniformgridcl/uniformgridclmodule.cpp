@@ -59,8 +59,8 @@ UniformGridCLModule::UniformGridCLModule(InviwoApplication* app) : InviwoModule(
     registerProcessor<VolumeMinMaxCLProcessor>();
     registerProcessor<VolumeSequencePlayer>();
 
-    registerDataReader(util::make_unique<UniformGrid3DReader>());
-    registerDataWriter(util::make_unique<UniformGrid3DWriter>());
+    registerDataReader(std::make_unique<UniformGrid3DReader>());
+    registerDataWriter(std::make_unique<UniformGrid3DWriter>());
     
 
     registerPort<UniformGrid3DInport>();
@@ -74,7 +74,7 @@ UniformGridCLModule::UniformGridCLModule(InviwoApplication* app) : InviwoModule(
 int UniformGridCLModule::getVersion() const { return 1; }
 
 std::unique_ptr<VersionConverter> UniformGridCLModule::getConverter(int version) const {
-    return util::make_unique<Converter>(version);
+    return std::make_unique<Converter>(version);
 }
 
 UniformGridCLModule::Converter::Converter(int version) : version_(version) {}

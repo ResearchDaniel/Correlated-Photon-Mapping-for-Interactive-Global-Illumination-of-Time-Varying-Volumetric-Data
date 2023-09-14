@@ -50,7 +50,7 @@ public:
     virtual UniformGrid3DReader* clone() const override;
     virtual ~UniformGrid3DReader() = default;
     
-    virtual std::shared_ptr<UniformGrid3DVector> readData(const std::string& filePath) override;
+    virtual std::shared_ptr<UniformGrid3DVector> readData(const std::filesystem::path& filePath) override;
 };
 
 } // namespace

@@ -84,7 +84,7 @@ LightCLModule::LightCLModule(InviwoApplication* app) : InviwoModule(app, "LightC
 int LightCLModule::getVersion() const { return 1; }
 
 std::unique_ptr<VersionConverter> LightCLModule::getConverter(int version) const {
-    return util::make_unique<Converter>(version);
+    return std::make_unique<Converter>(version);
 }
 
 LightCLModule::Converter::Converter(int version) : version_(version) {}

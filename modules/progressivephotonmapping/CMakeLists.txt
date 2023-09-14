@@ -38,7 +38,7 @@ set(SHADER_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/cl/photontracer.cl
     ${CMAKE_CURRENT_SOURCE_DIR}/cl/threshold.cl
 )
-ivw_group("Shader Files" ${SHADER_FILES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/cl PREFIX "Shader Files" FILES ${SHADER_FILES})
 
 #--------------------------------------------------------------------
 # Create module

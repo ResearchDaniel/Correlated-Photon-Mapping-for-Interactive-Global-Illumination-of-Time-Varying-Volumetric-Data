@@ -83,7 +83,7 @@ ImportanceSamplingCLModule::ImportanceSamplingCLModule(InviwoApplication* app) :
 int ImportanceSamplingCLModule::getVersion() const { return 1; }
 
 std::unique_ptr<VersionConverter> ImportanceSamplingCLModule::getConverter(int version) const {
-    return util::make_unique<Converter>(version);
+    return std::make_unique<Converter>(version);
 }
 
 ImportanceSamplingCLModule::Converter::Converter(int version) : version_(version) {}

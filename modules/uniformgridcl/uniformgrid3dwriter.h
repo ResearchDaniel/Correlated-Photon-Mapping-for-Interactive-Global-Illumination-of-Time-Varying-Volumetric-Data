@@ -43,8 +43,7 @@ namespace inviwo {
  * \brief VERY_BRIEFLY_DESCRIBE_THE_CLASS
  * DESCRIBE_THE_CLASS
  */
-class IVW_MODULE_UNIFORMGRIDCL_API UniformGrid3DWriter: public DataWriter {
-    //: public DataWriterType< UniformGrid3DVector > {
+class IVW_MODULE_UNIFORMGRIDCL_API UniformGrid3DWriter: public DataWriterType<UniformGrid3DVector> {
 public:
     UniformGrid3DWriter();
     UniformGrid3DWriter(const UniformGrid3DWriter& rhs);
@@ -52,7 +51,7 @@ public:
     virtual UniformGrid3DWriter* clone() const;
     virtual ~UniformGrid3DWriter() = default;
     
-    virtual void writeData(const UniformGrid3DVector* data, const std::string filePath) const;
+    virtual void writeData(const UniformGrid3DVector* data, const std::filesystem::path& path) const;
     template<typename S>
     void writeKeyToString(std::stringstream& ss, const std::string& key, const S& vec) const {
         ss << key << ": " << vec << std::endl;

@@ -32,52 +32,23 @@
 
 #include <modules/uniformgridcl/uniformgridclmoduledefine.h>
 #include <inviwo/core/common/inviwo.h>
-#include <inviwo/core/processors/processor.h>
-#include <inviwo/core/properties/boolproperty.h>
-#include <inviwo/core/properties/buttonproperty.h>
-#include <inviwo/core/properties/fileproperty.h>
-#include <inviwo/core/ports/imageport.h>
+#include <modules/base/processors/dataexport.h>            // for DataExport
 #include <modules/uniformgridcl/uniformgrid3d.h>
 
 namespace inviwo {
 
-/** \docpage{org.inviwo.UniformGrid3DExport, Uniform Grid3DExport}
- * ![](org.inviwo.UniformGrid3DExport.png?classIdentifier=org.inviwo.UniformGrid3DExport)
- * Explanation of how to use the processor.
- *
- * ### Inports
- *   * __<Inport1>__ <description>.
- *
- * ### Outports
- *   * __<Outport1>__ <description>.
- * 
- * ### Properties
- *   * __<Prop1>__ <description>.
- *   * __<Prop2>__ <description>
- */
 
-
-/**
- * \class UniformGrid3DExport
- * \brief <brief description> 
- * <Detailed description from a developer prespective>
- */
-class IVW_MODULE_UNIFORMGRIDCL_API UniformGrid3DExport : public Processor { 
+class IVW_MODULE_UNIFORMGRIDCL_API UniformGrid3DExport : public DataExport<UniformGrid3DVector, UniformGrid3DVectorInport> {
 public:
-    UniformGrid3DExport();
-    virtual ~UniformGrid3DExport();
-     
-    virtual void process() override;
+    UniformGrid3DExport(InviwoApplication* app);
+    virtual ~UniformGrid3DExport() = default;
+    
 
     virtual const ProcessorInfo getProcessorInfo() const override;
     static const ProcessorInfo processorInfo_;
+protected:
+    virtual const UniformGrid3DVector* getData() override;
 
-    void exportData();
-private:
-    UniformGrid3DVectorInport inport_;
-    FileProperty file_;
-    ButtonProperty exportButton_;
-    BoolProperty overwrite_;
 };
 
 } // namespace

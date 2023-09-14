@@ -71,8 +71,8 @@ RandomNumberGenerator2DCL::RandomNumberGenerator2DCL()
     addProperty(workGroupSize_);
     addProperty(useGLSharing_);
 
-    nRandomNumbers_.onChange(this, &RandomNumberGenerator2DCL::nRandomNumbersChanged);
-    regenerateNumbers_.onChange(this, &RandomNumberGenerator2DCL::regenerate);
+    nRandomNumbers_.onChange([this]() { nRandomNumbersChanged(); });
+    regenerateNumbers_.onChange([this]() { regenerate(); });
 
     kernel_ = addKernel("randomnumbergenerator.cl", "randomNumberGenerator2DKernel");
     nRandomNumbersChanged();

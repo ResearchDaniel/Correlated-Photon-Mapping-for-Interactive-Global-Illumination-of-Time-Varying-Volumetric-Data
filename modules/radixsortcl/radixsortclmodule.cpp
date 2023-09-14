@@ -53,27 +53,27 @@ namespace inviwo {
 RadixSortCLModule::RadixSortCLModule(InviwoApplication* app) : InviwoModule(app, "RadixSortCL") {
     registerProcessor<RadixSortCL>();
 
-    OpenCL::getPtr()->addCommonIncludeDirectory(getPath() + "/ext/clogs/kernels");
+    OpenCL::getPtr()->addCommonIncludeDirectory(getPath() / "ext/clogs/kernels");
     for (const auto& elem : OpenCL::getPtr()->getCommonIncludeDirectories()) {
-        std::string pathToKernels = elem;
+        auto pathToKernels = elem;
         try {
-            if (filesystem::fileExists(pathToKernels + "/radixsort.cl"))
-                addSourceToClogs(pathToKernels + "/", "radixsort.cl", "431a3a83882a2497d57d49faafc95f3caceaeca4a42aca9623b3aae7dc6cf4ee");
-            if (filesystem::fileExists(pathToKernels + "/reduce.cl"))
-                addSourceToClogs(pathToKernels + "/", "reduce.cl", "52c419ceb4263cc36ca2f9297b10fe98c21173aabde3c02609358d0834f51f91");
-            if (filesystem::fileExists(pathToKernels + "/scan.cl"))
-                addSourceToClogs(pathToKernels + "/", "scan.cl", "dbf441df48411f177a18b899f9472737a4711c843b4c25907b756274a911a437");
+            if (filesystem::fileExists(pathToKernels / "radixsort.cl"))
+                addSourceToClogs(pathToKernels / "radixsort.cl", "431a3a83882a2497d57d49faafc95f3caceaeca4a42aca9623b3aae7dc6cf4ee");
+            if (filesystem::fileExists(pathToKernels / "reduce.cl"))
+                addSourceToClogs(pathToKernels / "reduce.cl", "52c419ceb4263cc36ca2f9297b10fe98c21173aabde3c02609358d0834f51f91");
+            if (filesystem::fileExists(pathToKernels / "scan.cl"))
+                addSourceToClogs(pathToKernels / "scan.cl", "dbf441df48411f177a18b899f9472737a4711c843b4c25907b756274a911a437");
         } catch (std::ifstream::failure& ex) {
             LogError(ex.what());
         }
     }
 }
-void RadixSortCLModule::addSourceToClogs(const std::string& path, const std::string& fileName, const std::string& hash) {
-    TextFileReader fileReader(path + fileName);
+void RadixSortCLModule::addSourceToClogs(const std::filesystem::path& path, const std::string& hash) {
+    TextFileReader fileReader(path);
     std::string prog;
     try {
         prog = fileReader.read();
-        clogs::detail::getSourceMap()[fileName] = clogs::detail::Source(prog, hash);
+        clogs::detail::getSourceMap()[path.filename().string()] = clogs::detail::Source(prog, hash);
     } catch (std::ifstream::failure& ex) {
         throw ex;
     }

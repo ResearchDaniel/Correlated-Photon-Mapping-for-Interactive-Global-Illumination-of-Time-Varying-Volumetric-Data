@@ -54,7 +54,7 @@ set(SHADER_FILES
 )
 ivw_group("Shader Files" ${SHADER_FILES})
 
-find_package(Boost 1.55.0 REQUIRED)
+find_package(Boost 1.55 REQUIRED)
 
 #--------------------------------------------------------------------
 # Create lib
@@ -78,7 +78,7 @@ endif()
 
 if(WIN32)
 	target_compile_definitions(clogs PUBLIC
-								_VARIADIC_MAX=10
+								_VARIADIC_MAX=32
 								UNICODE
 								CLOGS_FS_WINDOWS)
 	target_link_libraries(clogs PRIVATE shlwapi.lib)
@@ -87,13 +87,12 @@ else()
 								CLOGS_FS_UNIX)
 endif(WIN32)
 
-target_link_libraries(clogs PRIVATE inviwo-module-opencl)
+target_link_libraries(clogs PRIVATE inviwo-module-opencl Boost::boost)
 
 #--------------------------------------------------------------------
 # Add includes
 target_include_directories(clogs PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/..
-	${Boost_INCLUDE_DIRS}
 )
 
 #--------------------------------------------------------------------

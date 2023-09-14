@@ -27,7 +27,9 @@
  *
  *********************************************************************************/
 
-#include "uniformgrid3dvectorsource.h"
+#include <modules/uniformgridcl/processors/uniformgrid3dvectorsource.h>
+
+#include <inviwo/core/common/factoryutil.h>             // for getDataReaderFactory, get...
 #include <inviwo/core/io/datareaderfactory.h>
 #include <inviwo/core/util/filesystem.h>
 #include <inviwo/core/io/datareaderexception.h>
@@ -41,76 +43,17 @@ const ProcessorInfo UniformGrid3DVectorSource::processorInfo_{
     "UniformGrid3D",              // Category
     CodeState::Experimental,  // Code state
     Tags::CPU,               // Tags
+    "Loads a UniformGrid3D or UniformGrid3D Sequence from a given file. "_help 
 };
 
 const ProcessorInfo UniformGrid3DVectorSource::getProcessorInfo() const {
     return processorInfo_;
 }
 
-UniformGrid3DVectorSource::UniformGrid3DVectorSource()
-    : Processor()
-    , outport_("data")
-    , file_("filename", "File")
-    , reload_("reload", "Reload data")
-    , isDeserializing_(false) {
-    file_.setContentType("UniformGrid3D");
-    file_.setDisplayName("UniformGrid3D file");
-
-    file_.onChange([this]() { load(); });
-    reload_.onChange([this]() { load(); });
-
-    addFileNameFilters();
-
-    addPort(outport_);
-
-    addProperty(file_);
-    addProperty(reload_);
+UniformGrid3DVectorSource::UniformGrid3DVectorSource(InviwoApplication* app, const std::filesystem::path& filename)
+    : DataSource<UniformGrid3DVector, UniformGrid3DVectorOutport>(util::getDataReaderFactory(app), filename, "UniformGrid3D") {
+    filePath.setDisplayName("UniformGrid3D file");
 }
-
-void UniformGrid3DVectorSource::load(bool deserialize /*= false*/) {
-    if (isDeserializing_ || file_.get().empty()) return;
-
-    auto rf = InviwoApplication::getPtr()->getDataReaderFactory();
-    std::string ext = filesystem::getFileExtension(file_.get());
-    if (auto reader = rf->getReaderForTypeAndExtension<UniformGrid3DVector>(ext)) {
-        try {
-            data_ = reader->readData(file_.get());
-        } catch (DataReaderException const& e) {
-            LogProcessorError("Could not load data: " << file_.get() << ", " << e.getMessage());
-        }
-    } else {
-        LogProcessorError("Could not find a data reader for file: " << file_.get());
-    }
-
-}
-
-void UniformGrid3DVectorSource::addFileNameFilters() {
-    auto rf = InviwoApplication::getPtr()->getDataReaderFactory();
-    auto extensions = rf->getExtensionsForType<UniformGrid3DVector>();
-    file_.clearNameFilters();
-    file_.addNameFilter(FileExtension("*", "All Files"));
-    for (auto& ext : extensions) {
-        file_.addNameFilter(ext.description_ + " (*." + ext.extension_ + ")");
-    }
-}
-
-void UniformGrid3DVectorSource::process() {
-    if (!isDeserializing_ && data_ && !data_->empty()) {
-        outport_.setData(data_);
-    }
-}
-
-void UniformGrid3DVectorSource::deserialize(Deserializer& d) {
-    {
-        isDeserializing_ = true;
-        Processor::deserialize(d);
-        addFileNameFilters();
-        isDeserializing_ = false;
-    }
-    load(true);
-}
-
-
 
 } // namespace
 

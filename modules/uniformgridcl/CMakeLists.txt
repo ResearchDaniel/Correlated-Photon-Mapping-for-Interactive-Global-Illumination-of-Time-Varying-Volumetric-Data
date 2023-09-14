@@ -50,7 +50,8 @@ set(CL_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/cl/uniformgrid/uniformgrid.cl
     ${CMAKE_CURRENT_SOURCE_DIR}/cl/uniformgrid/volumeminmax.cl
 )
-ivw_group("Shader Files" ${CL_FILES})
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR}/cl PREFIX "Shader Files" FILES ${CL_FILES})
+
 set(SHADER_FILES
 	${CMAKE_CURRENT_SOURCE_DIR}/glsl/volume_mix.frag
 )
